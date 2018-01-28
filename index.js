@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 
 require('dotenv').config();
+console.log(process.env);
 
 // Create a SHA512 hexdigest to find the group this app is for
 const sha = crypto.createHash('SHA512');
@@ -54,7 +55,7 @@ client.connect().then(function () {
   app.listen(port, function () {
     console.log(`Listening on port ${port}`);
   });
-}).catch(function () {
+}).catch(function (e) {
   console.error('Could not load site', e);
 });
 
