@@ -12,6 +12,7 @@ PGDATABASE=my-pg-database
 PGPORT=my-pg-port
 API_KEY=my-api-key
 APP_NAME=ember-app-name
+NODE_PORT=80
 ```
 
 The fields prefixed with `PG` are named for our database, postgres. We connect to the database to fetch the current builds that this app will use.
