@@ -27,7 +27,7 @@ client.connect().then(function () {
   console.log(`Found site configuration for ${group.hostname}.`);
 
   const app = express();
-  app.get('/health', (req, res) => res.send('ok'));
+  app.get('/health', (req, res) => res.send('❤️'));
 
   app.get('*', function (req, res) {
     client.query({
