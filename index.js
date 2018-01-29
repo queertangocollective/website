@@ -35,16 +35,7 @@ client.connect().then(function () {
       values: [group.id]
     }).then(function (result) {
       let build = result.rows[0];
-      console.log(`Loaded build #${build.id}`);
-      // Re-insert the API key here for use in the frontend app
-      let metaTag = new RegExp(`name="${process.env['APP_NAME']}/config/environment" content="(.*)"`);
-      let html = build.html.replace(metaTag, function (encodedConfig) {
-        let config = JSON.parse(decodeURIComponent(encodedConfig));
-        config.API_KEY = process.env['API_KEY'];
-        return encodeURIComponent(JSON.stringify(config));
-      });
-
-      res.send(html);
+      res.send(build.html);
     }, function () {
       res.send(error);
     });
