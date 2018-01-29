@@ -50,7 +50,7 @@ client.connect().then(function () {
     });
   });
 
-  let port = process.env['NODE_PORT'];
+  let port = process.env['PORT'];
   app.listen(port, function () {
     console.log(`Listening on port ${port}`);
   });
