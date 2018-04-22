@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
 
 require('dotenv').config();
 
@@ -10,6 +11,8 @@ const secret = sha.digest('hex');
 
 const { Client } = require('pg');
 const client = new Client();
+
+const redirect = fs.readFileSync('redirect.html').toString();
 
 // Load current build of application from pg
 console.log('Connecting to the database...');
@@ -28,6 +31,9 @@ client.connect().then(function () {
 
   const app = express();
   app.get('/health', (req, res) => res.send('❤️'));
+  app.get('/torii/redirect.html', function (req, res) {
+    res.send(redirect);
+  });
 
   app.get('*', function (req, res) {
     client.query({
