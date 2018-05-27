@@ -41,7 +41,7 @@ client.connect().then(function () {
       values: [group.id]
     }).then(function (result) {
       let build = result.rows[0];
-      res.send(build.html.replace('{{build.id}}', build.id));
+      res.send(build.html.replace('%7B%7Bbuild.id%7D%7D', build.id));
     }, function () {
       res.send(error);
     });
