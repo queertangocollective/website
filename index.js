@@ -35,6 +35,12 @@ client.connect().then(function () {
     res.send(redirect);
   });
 
+  if (process.env['APPLE_PAY_DOMAIN_ASSOCIATION']) {
+    app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
+      res.send(process.env['APPLE_PAY_DOMAIN_ASSOCIATION']);
+    });
+  }
+
   app.get('*', function (req, res) {
     client.query({
       text: 'SELECT * FROM builds WHERE group_id=$1 AND live=True',
