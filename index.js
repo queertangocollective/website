@@ -36,11 +36,10 @@ client.connect().then(function () {
   });
 
   app.get('/sitemap.xml', function (req, res) {
-    client.query({
+    return client.query({
       text: 'SELECT slug, updated_at FROM posts WHERE group_id=$1 and published=$2',
       values: [group.id, true]
     }).then((result) => {
-      console.log(result);
       let urls = result.rows.map((post) => {
         // Remove precise time from the url
         let lastmod = post.updated_at.slice(0, post.updated_at.indexOf('T'));
