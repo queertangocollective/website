@@ -39,8 +39,8 @@ client.connect().then(function () {
     client.query({
       text: 'SELECT slug, updated_at FROM posts WHERE group_id=$1 and published=$2',
       values: [group.id, true]
-    }).then((posts) => {
-      let urls = posts.map((post) => {
+    }).then((result) => {
+      let urls = result.rows.map((post) => {
         // Remove precise time from the url
         let lastmod = post.updated_at.slice(0, post.updated_at.indexOf('T'));
         return `<url><loc>${group.hostname}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
@@ -49,9 +49,12 @@ client.connect().then(function () {
     });
   });
 
-  app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
-    res.send(group.apple_developer_merchantid_domain_association);
-  });
+  if (group.apple_developer_merchantid_domain_association) {
+    app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
+      console.log('Verifying Apple Pay setup');
+      res.send(group.apple_developer_merchantid_domain_association);
+    });
+  }
 
   app.get('*', function (req, res) {
     client.query({
