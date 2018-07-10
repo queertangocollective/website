@@ -35,11 +35,23 @@ client.connect().then(function () {
     res.send(redirect);
   });
 
-  if (process.env['APPLE_PAY_DOMAIN_ASSOCIATION']) {
-    app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
-      res.send(process.env['APPLE_PAY_DOMAIN_ASSOCIATION']);
+  app.get('/sitemap.xml', function (req, res) {
+    client.query({
+      text: 'SELECT slug, updated_at FROM posts WHERE group_id=$1 and published=$2',
+      values: [group.id, true]
+    }).then((posts) => {
+      let urls = posts.map((post) => {
+        // Remove precise time from the url
+        let lastmod = post.updated_at.slice(0, post.updated_at.indexOf('T'));
+        return `<url><loc>${group.hostname}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
+      });
+      return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`;
     });
-  }
+  });
+
+  app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
+    res.send(group.apple_developer_merchantid_domain_association);
+  });
 
   app.get('*', function (req, res) {
     client.query({
