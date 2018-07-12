@@ -31,7 +31,6 @@ client.connect().then(function () {
       res.send('');
       return;
     }
-    console.log(req.headers);
     console.log(`ℹ️  [${group.hostname}] Creating sitemap.xml`);
 
     return client.query({
@@ -44,6 +43,7 @@ client.connect().then(function () {
         let lastmod = updatedAt.slice(0, updatedAt.indexOf('T'));
         return `<url><loc>${group.hostname}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
       });
+      res.set('Content-Type', 'text/xml');
       res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`);
     }, function (error) {
       res.send(error);
@@ -59,9 +59,9 @@ client.connect().then(function () {
       return;
     }
 
-    console.log(req.headers);
     console.log(`ℹ️  [${group.hostname}] Sending Apple Pay info`);
 
+    res.set('Content-Type', 'text/plain');
     res.send(group.apple_developer_merchantid_domain_association);
   });
 
@@ -73,7 +73,6 @@ client.connect().then(function () {
       return;
     }
 
-    console.log(req.headers);
     console.log(`ℹ️  [${group.hostname}] Loading current build ${group.current_build_id}`);
 
     client.query({
