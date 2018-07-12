@@ -18,7 +18,7 @@ client.connect().then(function () {
   });
 
   app.get('/sitemap.xml', function (req, res) {
-    console.log('Loading group information...');
+    console.log(`Loading group information for ${req.headers.host}...`);
 
     return client.query({
       text: 'SELECT id FROM groups WHERE hostname=$1',
@@ -39,13 +39,13 @@ client.connect().then(function () {
         return `<url><loc>${group.hostname}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
       });
       res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`);
-    }, function () {
+    }, function (error) {
       res.send(error);
     });
   });
 
   app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
-    console.log('Loading group information...');
+    console.log(`Loading group information for ${req.headers.host}...`);
 
     return client.query({
       text: 'SELECT apple_developer_merchantid_domain_association FROM groups WHERE hostname=$1',
@@ -54,13 +54,13 @@ client.connect().then(function () {
       let group = result.rows[0];
       console.log(`Sending Apple Pay info for ${req.headers.host}.`);
       res.send(group.apple_developer_merchantid_domain_association);
-    }, function () {
+    }, function (error) {
       res.send(error);
     });
   });
 
   app.get('*', function (req, res) {
-    console.log('Loading group information...');
+    console.log(`Loading group information for ${req.headers.host}...`);
 
     return client.query({
       text: 'SELECT current_build_id FROM groups WHERE hostname=$1',
@@ -77,7 +77,7 @@ client.connect().then(function () {
     }).then(function (result) {
       let build = result.rows[0];
       res.send(build.html.replace('%7B%7Bbuild.id%7D%7D', build.id));
-    }, function () {
+    }, function (error) {
       res.send(error);
     });
   });
