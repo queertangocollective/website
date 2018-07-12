@@ -57,6 +57,7 @@ client.connect().then(function () {
   }
 
   app.get('*', function (req, res) {
+    console.log('headers', req.headers);
     client.query({
       text: 'SELECT * FROM builds WHERE group_id=$1 AND live=True',
       values: [group.id]
