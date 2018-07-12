@@ -35,7 +35,7 @@ client.connect().then(function () {
       let urls = result.rows.map((post) => {
         // Remove precise time from the url
         let updatedAt = post.updated_at.toISOString();
-        let lastmod = updated_at.slice(0, updated_at.indexOf('T'));
+        let lastmod = updatedAt.slice(0, updatedAt.indexOf('T'));
         return `<url><loc>${group.hostname}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
       });
       res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`);
