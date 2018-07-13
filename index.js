@@ -12,7 +12,7 @@ const redirect = fs.readFileSync('redirect.html').toString();
 console.log('Connecting to the database...');
 client.connect().then(function () {
   return client.query({
-    text: 'SELECT hostname, id, current_build_id, apple_developer_merchantid_domain_association FROM groups'
+    text: 'SELECT hostname, id FROM groups'
   });
 }).then(function (result) {
   let groups = result.rows;
@@ -59,10 +59,18 @@ client.connect().then(function () {
       return;
     }
 
-    console.log(`ℹ️  [${group.hostname}] Sending Apple Pay info`);
+    return client.query({
+      text: 'SELECT apple_developer_merchantid_domain_association FROM groups WHERE group_id=$1',
+      values: [group.id]
+    }).then((result) => {
+      console.log(`ℹ️  [${group.hostname}] Sending Apple Pay info`);
 
-    res.set('Content-Type', 'text/plain');
-    res.send(group.apple_developer_merchantid_domain_association);
+      res.set('Content-Type', 'text/plain');
+      res.send(result.rows[0].apple_developer_merchantid_domain_association);
+    }, function (error) {
+      res.send(error);
+      console.error(error);
+    });
   });
 
   app.get('*', function (req, res) {
@@ -73,11 +81,16 @@ client.connect().then(function () {
       return;
     }
 
-    console.log(`ℹ️  [${group.hostname}] Loading current build ${group.current_build_id}`);
+    return client.query({
+      text: 'SELECT current_build_id FROM groups WHERE group_id=$1',
+      values: [group.id]
+    }).then((result) => {
+      console.log(`ℹ️  [${group.hostname}] Loading current build ${result.rows[0].current_build_id}`);
 
-    client.query({
-      text: 'SELECT * FROM builds WHERE id=$1',
-      values: [group.current_build_id]
+      return client.query({
+        text: 'SELECT * FROM builds WHERE id=$1',
+        values: [result.rows[0].current_build_id]
+      });
     }).then(function (result) {
       let build = result.rows[0];
       res.send(build.html.replace('%7B%7Bbuild.id%7D%7D', build.id));
