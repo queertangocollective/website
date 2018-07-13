@@ -54,7 +54,7 @@ client.connect().then(function () {
   app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
     let group = groups.find((group) => group.hostname === req.headers.host);
     if (group == null) {
-      console.error(`⚠️  No group found for ${req.headers.hostname}`);
+      console.error(`⚠️  No group found for ${req.headers.host}`);
       res.send('');
       return;
     }
@@ -68,7 +68,7 @@ client.connect().then(function () {
   app.get('*', function (req, res) {
     let group = groups.find((group) => group.hostname === req.headers.host);
     if (group == null) {
-      console.error(`⚠️  No group found for ${req.headers.hostname}`);
+      console.error(`⚠️  No group found for ${req.headers.host}`);
       res.send('');
       return;
     }
