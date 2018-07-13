@@ -60,7 +60,7 @@ client.connect().then(function () {
     }
 
     return client.query({
-      text: 'SELECT apple_developer_merchantid_domain_association FROM groups WHERE group_id=$1',
+      text: 'SELECT apple_developer_merchantid_domain_association FROM groups WHERE id=$1',
       values: [group.id]
     }).then((result) => {
       console.log(`ℹ️  [${group.hostname}] Sending Apple Pay info`);
@@ -82,7 +82,7 @@ client.connect().then(function () {
     }
 
     return client.query({
-      text: 'SELECT current_build_id FROM groups WHERE group_id=$1',
+      text: 'SELECT current_build_id FROM groups WHERE id=$1',
       values: [group.id]
     }).then((result) => {
       console.log(`ℹ️  [${group.hostname}] Loading current build ${result.rows[0].current_build_id}`);
