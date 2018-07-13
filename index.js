@@ -27,7 +27,7 @@ client.connect().then(function () {
   app.get('/sitemap.xml', function (req, res) {
     let group = groups.find((group) => group.hostname === req.headers.host);
     if (group == null) {
-      console.error(`⚠️  No group found for ${req.headers.hostname}`);
+      console.error(`⚠️  No group found for ${req.headers.host}`);
       res.send('');
       return;
     }
