@@ -20,10 +20,10 @@ client.connect().then(function () {
 
   const app = express();
   app.use(function(req, res, next) {
-    console.log(req.get('X-Forwarded-Proto'), req.secure);
-    if ((!req.secure) && (req.get('X-Forwarded-Proto') !== 'https')) {
-      console.log(`🔒  Upgrading to HTTPS for ${req.get('Host')}`);
-      res.redirect('https://' + req.get('Host') + req.url);
+    console.log(req.headers['X-Forwarded-Proto'], req.secure, req.url);
+    if ((!req.secure) && (req.headers['X-Forwarded-Proto'] !== 'https')) {
+      console.log(`🔒  Upgrading to HTTPS for $$req.geaders.host}`);
+      res.redirect(`https://${req.headers.host}/${req.url}`);
     } else {
       next();
     }
