@@ -86,7 +86,7 @@ client.connect().then(function (result) {
 
       return client.query({
         text: 'SELECT * FROM builds WHERE id=$1',
-        values: [result.rows[0].current_build_id]
+        values: [group.current_build_id]
       });
     }).then(function (result) {
       let build = result.rows[0];
