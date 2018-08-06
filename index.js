@@ -8,7 +8,7 @@ const client = new Client();
 
 const redirect = fs.readFileSync('redirect.html').toString();
 
-async function getGroup(req, res) {
+function getGroup(req, res) {
   return client.query({
     text: 'SELECT * FROM groups WHERE hostname=$1',
     values: [req.headers.host]
