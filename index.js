@@ -12,7 +12,7 @@ function getGroup(req, res) {
   return client.query({
     text: 'SELECT * FROM groups WHERE hostname=$1',
     values: [req.headers.host]
-  }).then(() => {
+  }).then((result) => {
     if (result.rows.length == 0) {
       console.error(`⚠️ No group found for ${req.headers.host}`);
       res.send('');
