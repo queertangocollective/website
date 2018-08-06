@@ -20,7 +20,9 @@ client.connect().then(function () {
 
   const app = express();
   app.use(function(req, res, next) {
+    console.log(req.get('X-Forwarded-Proto'), req.secure);
     if ((!req.secure) && (req.get('X-Forwarded-Proto') !== 'https')) {
+      console.log(`🔒  Upgrading to HTTPS for ${req.get('Host')}`);
       res.redirect('https://' + req.get('Host') + req.url);
     } else {
       next();
