@@ -29,7 +29,7 @@ client.connect().then(function (result) {
   app.use(function(req, res, next) {
     if ((!req.secure) && (req.headers['x-forwarded-proto'] === 'http')) {
       console.log(`🔒 Securing http://${req.headers.host}`);
-      res.redirect(`https://${req.headers.host}/${req.url}`);
+      res.redirect(`https://${req.headers.host}${req.url}`);
     } else {
       next();
     }
