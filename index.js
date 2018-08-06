@@ -21,9 +21,10 @@ client.connect().then(function () {
   const app = express();
   app.use(function(req, res, next) {
     console.log(req.headers, req.secure, req.url);
-    if ((!req.secure) && (req.headers['X-Forwarded-Proto'] !== 'https')) {
+    if ((!req.secure) && (req.headers['x-forwarded-proto'] !== 'https')) {
       console.log(`🔒 Securing request to http://${req.headers.host}`);
-      res.redirect(`https://${req.headers.host}/${req.url}`);
+      next();
+      //res.redirect(`https://${req.headers.host}/${req.url}`);
     } else {
       next();
     }
