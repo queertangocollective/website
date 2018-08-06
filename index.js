@@ -48,16 +48,16 @@ client.connect().then(function (result) {
       return client.query({
         text: 'SELECT slug, updated_at FROM posts WHERE group_id=$1 and published=True',
         values: [group.id]
+      }).then((result) => {
+        let urls = result.rows.map((post) => {
+          // Remove precise time from the url
+          let updatedAt = post.updated_at.toISOString();
+          let lastmod = updatedAt.slice(0, updatedAt.indexOf('T'));
+          return `<url><loc>${group.hostname}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
+        });
+        res.set('Content-Type', 'text/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`);
       });
-    }).then((result) => {
-      let urls = result.rows.map((post) => {
-        // Remove precise time from the url
-        let updatedAt = post.updated_at.toISOString();
-        let lastmod = updatedAt.slice(0, updatedAt.indexOf('T'));
-        return `<url><loc>${group.hostname}/${post.slug}</loc><lastmod>${lastmod}</lastmod></url>`
-      });
-      res.set('Content-Type', 'text/xml');
-      res.send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`);
     }, function (error) {
       res.send(error);
       console.error(error);
@@ -87,10 +87,10 @@ client.connect().then(function (result) {
       return client.query({
         text: 'SELECT * FROM builds WHERE id=$1',
         values: [group.current_build_id]
+      }).then(function (result) {
+        let build = result.rows[0];
+        res.send(build.html.replace('%7B%7Bbuild.id%7D%7D', build.id));
       });
-    }).then(function (result) {
-      let build = result.rows[0];
-      res.send(build.html.replace('%7B%7Bbuild.id%7D%7D', build.id));
     }, function (error) {
       res.send(error);
       console.error(error);
