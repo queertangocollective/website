@@ -8,23 +8,28 @@ const client = new Client();
 
 const redirect = fs.readFileSync('redirect.html').toString();
 
+async function getGroup(req, res) {
+  return client.query({
+    text: 'SELECT * FROM groups WHERE hostname=$1',
+    values: [req.headers.host]
+  }).then(() => {
+    if (result.rows.length == 0) {
+      console.error(`⚠️ No group found for ${req.headers.host}`);
+      res.send('');
+      return null;
+    }
+    return result.rows[0];
+  });
+}
+
 // Load current build of application from pg
 console.log('Connecting to the database...');
-client.connect().then(function () {
-  return client.query({
-    text: 'SELECT hostname, id FROM groups'
-  });
-}).then(function (result) {
-  let groups = result.rows;
-  let hostnames = groups.map((group) => group.hostname);
-
+client.connect().then(function (result) {
   const app = express();
   app.use(function(req, res, next) {
-    console.log(req.headers, req.secure, req.url);
-    if ((!req.secure) && (req.headers['x-forwarded-proto'] !== 'https')) {
-      console.log(`🔒 Securing request to http://${req.headers.host}`);
-      next();
-      //res.redirect(`https://${req.headers.host}/${req.url}`);
+    if ((!req.secure) && (req.headers['x-forwarded-proto'] === 'http')) {
+      console.log(`🔒 Securing http://${req.headers.host}`);
+      res.redirect(`https://${req.headers.host}/${req.url}`);
     } else {
       next();
     }
@@ -36,17 +41,14 @@ client.connect().then(function () {
   });
 
   app.get('/sitemap.xml', function (req, res) {
-    let group = groups.find((group) => group.hostname === req.headers.host);
-    if (group == null) {
-      console.error(`⚠️  No group found for ${req.headers.host}`);
-      res.send('');
-      return;
-    }
-    console.log(`ℹ️  [${group.hostname}] Creating sitemap.xml`);
+    getGroup(req, res).then((group) => {
+      if (group == null) return;
 
-    return client.query({
-      text: 'SELECT slug, updated_at FROM posts WHERE group_id=$1 and published=True',
-      values: [group.id]
+      console.log(`ℹ️ [${group.hostname}] Creating sitemap.xml`);
+      return client.query({
+        text: 'SELECT slug, updated_at FROM posts WHERE group_id=$1 and published=True',
+        values: [group.id]
+      });
     }).then((result) => {
       let urls = result.rows.map((post) => {
         // Remove precise time from the url
@@ -63,21 +65,13 @@ client.connect().then(function () {
   });
 
   app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
-    let group = groups.find((group) => group.hostname === req.headers.host);
-    if (group == null) {
-      console.error(`⚠️  No group found for ${req.headers.host}`);
-      res.send('');
-      return;
-    }
+    getGroup(req, res).then((group) => {
+      if (group == null) return;
 
-    return client.query({
-      text: 'SELECT apple_developer_merchantid_domain_association FROM groups WHERE id=$1',
-      values: [group.id]
-    }).then((result) => {
-      console.log(`ℹ️  [${group.hostname}] Sending Apple Pay info`);
+      console.log(`ℹ️ [${group.hostname}] Sending Apple Pay info`);
 
       res.set('Content-Type', 'text/plain');
-      res.send(result.rows[0].apple_developer_merchantid_domain_association);
+      res.send(group.apple_developer_merchantid_domain_association);
     }, function (error) {
       res.send(error);
       console.error(error);
@@ -85,18 +79,10 @@ client.connect().then(function () {
   });
 
   app.get('*', function (req, res) {
-    let group = groups.find((group) => group.hostname === req.headers.host);
-    if (group == null) {
-      console.error(`⚠️  No group found for ${req.headers.host}`);
-      res.send('');
-      return;
-    }
+    getGroup(req, res).then((group) => {
+      if (group == null) return;
 
-    return client.query({
-      text: 'SELECT current_build_id FROM groups WHERE id=$1',
-      values: [group.id]
-    }).then((result) => {
-      console.log(`ℹ️  [${group.hostname}] Loading current build ${result.rows[0].current_build_id}`);
+      console.log(`ℹ️ [${group.hostname}] Loading current build ${group.current_build_id}`);
 
       return client.query({
         text: 'SELECT * FROM builds WHERE id=$1',
@@ -118,4 +104,3 @@ client.connect().then(function () {
 }).catch(function (e) {
   console.error('Could connect to database', e);
 });
-
