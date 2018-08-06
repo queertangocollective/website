@@ -19,6 +19,14 @@ client.connect().then(function () {
   let hostnames = groups.map((group) => group.hostname);
 
   const app = express();
+  app.use(function(req, res, next) {
+    if ((!req.secure) && (req.get('X-Forwarded-Proto') !== 'https')) {
+      res.redirect('https://' + req.get('Host') + req.url);
+    } else {
+      next();
+    }
+  });
+
   app.get('/health', (req, res) => res.send('❤️'));
   app.get('/torii/redirect.html', function (req, res) {
     res.send(redirect);
