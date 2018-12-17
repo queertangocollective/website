@@ -1,0 +1,19 @@
+<div class="wide-container location" id="location-{{attrs.id}}">
+  {{#if attrs.name}}
+    <h3 class="sticky">
+      {{~#if attrs.website~}}
+        <a target="_blank" href="{{attrs.website}}">{{attrs.name}}</a>
+      {{~else~}}
+        {{attrs.name}}
+      {{~/if~}}
+    </h3>
+  {{/if}}
+  <p>
+    {{attrs.addressLine}}<br>
+    {{#if attrs.extendedAddress}}
+      {{attrs.extendedAddress}}<br>
+    {{/if}}
+    {{attrs.city}}{{#if attrs.regionCode}}, {{attrs.regionCode}}{{/if}}{{#if attrs.postalCode}} {{attrs.postalCode}}{{/if}}<br>
+    <a target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/dir//{{attrs.latitude}},{{attrs.longitude}}/@{{attrs.latitude}},{{attrs.longitude}},15z">Directions</a>
+  </p>
+</div>
