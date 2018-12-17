@@ -161,7 +161,7 @@ app.get('*', function (req, res) {
 });
 
 
-let port = process.env['PORT'] || 9999;
+let port = process.env['NODE_PORT'] || 9999;
 app.listen(port, () => {
   console.log(`ℹ️ Listening on port ${port}`);
 });
