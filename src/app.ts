@@ -154,7 +154,11 @@ app.get('*', function (req, res) {
         });
       }, (error: Error) => {
         console.log(`🚫 [${group.hostname}] Error loading ${slug}`, error);
-        res.status(404).send('404');
+        let template = compile(readFileSync(join(__dirname, 'views/404.hbs')).toString());
+        res.status(404).send(html(template({
+          group: group,
+          sections: sections
+        })));
       });
     });
   });

@@ -92,7 +92,14 @@ header h5 {
   padding: 0.5rem 1rem;
 }
 
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 main {
+  flex: 1;
   margin-top: 210px;
 }
 
@@ -120,7 +127,7 @@ footer {
 }
 
 article {
-  line-height: 1.5rem;
+  line-height: 1.25rem;
 }
 
 article .container.clear-fix {
@@ -345,12 +352,17 @@ article figure.size-small:not(.align-left):not(.align-right) {
 
 @media (max-width: 500px) {
   article figure.size-small,
-  article figure.size-small.align-left,
-  article figure.size-small.align-right {
+  article figure.align-left,
+  article figure.align-right {
     padding-left: 0;
     padding-right: 0;
     max-width: 100%;
     float: none;
+  }
+
+  article figure.align-left figcaption,
+  article figure.align-right figcaption {
+    padding: 0 1rem;
   }
 
   .aligned-photo + p {
