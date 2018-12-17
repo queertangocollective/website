@@ -1,0 +1,7 @@
+<a href="/{{attrs.slug}}" class="container clear-fix post-embed">
+  <img {{#if attrs.photo.altText}}alt="{{attrs.photo.altText}}" {{/if}}src="{{attrs.photo.url}}" width={{attrs.photo.width}} height={{attrs.photo.height}}>
+  <div>
+    <h2>{{attrs.title}}</h2>
+    {{attrs.description}}
+  </div>
+</a>

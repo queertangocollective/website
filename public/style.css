@@ -321,6 +321,20 @@ article figure.size-small:not(.align-left):not(.align-right) {
   text-align: center;
 }
 
+.post-embed {
+  display: flex;
+}
+
+.post-embed h2 {
+  margin-top: 0;
+}
+
+.post-embed img {
+  max-width: 33%;
+  height: auto;
+  margin-right: 1rem;
+}
+
 @media (max-width: 700px) {
   article figure.size-small,
   article figure.align-left,

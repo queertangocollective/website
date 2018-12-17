@@ -18,10 +18,12 @@ import {
   Location,
   LocationName,
   Person,
+  PostEmbed,
   Photo,
   Schedule
 } from './annotations';
 import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard } from './mobiledoc-source';
+import { Anchor as MobiledocLink } from '@atjson/source-mobiledoc';
 import { formatDateRange } from './renderer';
 import * as knex from 'knex';
 
@@ -52,6 +54,7 @@ export default class QTCSource extends Document {
     ListItem,
     Paragraph,
     Person,
+    PostEmbed,
     Photo,
     Underline,
     YouTubeEmbed,
@@ -347,6 +350,35 @@ export default class QTCSource extends Document {
       photoIds.push(...gallery.attributes.photoIds);
     });
 
+    let relativeLinks = doc.where({ type: '-mobiledoc-a' })
+                           .where((link: MobiledocLink) => link.attributes.href.startsWith('/'));
+    let slugs = relativeLinks.map((link: MobiledocLink) => link.attributes.href.slice(1));
+    if (slugs.length) {
+      let posts = await db.select().from('posts').whereIn('slug', slugs);
+      posts.forEach((post: any) => {
+        let body = MobiledocSource.fromRaw(JSON.parse(post.body));
+        let photos = [...body.where({ type: '-mobiledoc-photo-card' }).sort()];
+        if (photos.length) {
+          photoIds.push(photos[0].attributes.photoId);
+        }
+        let firstParagraph = [...body.where({ type: '-mobiledoc-p' }).sort()][0];
+        let description = body.content.slice(firstParagraph.start, firstParagraph.end);
+
+        relativeLinks.where({ attributes: { '-mobiledoc-href': `/${post.slug}` } }).update((link: MobiledocLink) => {
+          doc.replaceAnnotation(link, new PostEmbed({
+            start: link.start,
+            end: link.end,
+            attributes: {
+              slug: post.slug,
+              title: post.title,
+              description,
+              photoId: photos[0].attributes.photoId,
+            }
+          }));
+        });
+      });
+    }
+
     if (photoIds.length) {
       let allPhotos = await db.select().from('photos').whereIn('id', compact(photoIds));
       photoCards.update((photoCard: PhotoCard) => {
@@ -369,6 +401,21 @@ export default class QTCSource extends Document {
           doc.removeAnnotation(photoCard);
         }
       });
+
+      allPhotos.forEach((photo: any) => {
+        debugger;
+        doc.where({ type: '-qtc-post-embed', attributes: { '-qtc-photoId': photo.id } }).set({
+          attributes: {
+            '-qtc-photo': {
+              '-qtc-url': photo.url,
+              '-qtc-altText': photo.title || '',
+              '-qtc-width': photo.width,
+              '-qtc-height': photo.height
+            }
+          }
+        });
+      })
+
       galleryCards.update((galleryCard: GalleryCard) => {
         let photos = allPhotos.filter((photo: any) => {
           return galleryCard.attributes.photoIds.indexOf(photo.id) !== -1;
@@ -391,6 +438,15 @@ export default class QTCSource extends Document {
         }));
       });
     }
+
+    doc.where({ type: '-qtc-post-embed' }).as('post').join(
+      doc.where({ type: '-mobiledoc-h3' }).as('headings'),
+      (a, b) => a.isAlignedWith(b)
+    ).update(({ headings }) => {
+      headings.forEach((heading) => {
+        doc.removeAnnotation(heading);
+      });
+    });
     return new this(doc.convertTo(OffsetSource).toJSON());
   }
 }
