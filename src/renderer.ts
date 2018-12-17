@@ -7,9 +7,19 @@ import { compile, registerHelper } from 'handlebars';
 registerHelper('equals', function(a, b) {
   return a === b;
 });
+
+registerHelper('not', function(a) {
+  return !a;
+});
+
 registerHelper('aspect-ratio', function(width, height) {
   return (height / width) * 100;
 });
+
+registerHelper('is-last-item', function(list, index) {
+  return list.length - 1 === index;
+});
+
 
 function isSameDay(a: Date, b: Date) {
   let date = new Intl.DateTimeFormat('en-US', {

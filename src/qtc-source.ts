@@ -1,4 +1,4 @@
-import Document, { ParseAnnotation } from '@atjson/document';
+import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour } from '@atjson/document';
 import OffsetSource, {
   Blockquote,
   Bold,
@@ -13,6 +13,7 @@ import OffsetSource, {
   YouTubeEmbed
 } from '@atjson/offset-annotations';
 import {
+  Byline,
   Gallery,
   Location,
   LocationName,
@@ -41,6 +42,7 @@ function compact<T>(array: T[]): NonNullable<T[]> {
 export default class QTCSource extends Document {
   static schema = [
     Blockquote,
+    Byline,
     Bold,
     Heading,
     Italic,
@@ -114,6 +116,7 @@ export default class QTCSource extends Document {
           let start = itineraryCard.start + 1;
           let listItemStart = start;
           let end = start + event.title.length + 1;
+          let annotations: Annotation[] = []
           doc.insertText(start, event.title + '\n');
           doc.addAnnotations(new Heading({
             start ,
@@ -127,33 +130,57 @@ export default class QTCSource extends Document {
           let range = formatDateRange(event.starts_at, event.ends_at);
           end = start + range.length + 1;
           doc.insertText(start, range + '\n');
-          let lineBreak = new LineBreak({
+          annotations.push(new LineBreak({
             start: end - 1,
             end
-          });
+          }));
           start = end;
 
-          event.guests.forEach((guest: any) => {
-            let people = doc.where({ type: '-mobiledoc-person-card' }).sort();
-            if (people.where({ attributes: { '-mobiledoc-personId': guest.person_id.toString() }}).length === 0) {
-              let insertAt = doc.content.length;
-              if (people.length > 0) {
-                insertAt = [...people][people.length - 1].end;
-              }
-              doc.insertText(insertAt, '\uFFFC\n');
-              doc.addAnnotations(new PersonCard({
-                start: insertAt,
-                end: insertAt + 1,
-                attributes: {
-                  personId: guest.person_id
-                }
-              }));
+          let groups = event.guests.reduce((E: any, guest: any) => {
+            if (E[guest.role] == null) {
+              E[guest.role] = [];
             }
+            E[guest.role].push(guest);
+            return E;
+          }, {});
+          Object.keys(groups).forEach((byline: string) => {
+            let guests = groups[byline];
+            doc.insertText(start, '\uFFFC\n');
+            end = start + 2;
+            annotations.push(new Byline({
+              start,
+              end: start + 1,
+              attributes: {
+                byline,
+                people: guests.map((guest: any) => guest.person_id)
+              }
+            }));
+            start = end;
+
+            guests.forEach((guest: any) => {
+              let peopleCards = doc.where({ type: '-mobiledoc-person-card' }).sort();
+              if (peopleCards.where({ attributes: { '-mobiledoc-personId': guest.person_id.toString() }}).length === 0) {
+                let insertAt = doc.content.length;
+                let behaviour = AdjacentBoundaryBehaviour.preserve;
+                if (peopleCards.length > 0) {
+                  insertAt = [...peopleCards][peopleCards.length - 1].end;
+                  behaviour = AdjacentBoundaryBehaviour.default;
+                }
+                doc.insertText(insertAt, '\uFFFC\n', behaviour);
+                doc.addAnnotations(new PersonCard({
+                  start: insertAt,
+                  end: insertAt + 1,
+                  attributes: {
+                    personId: guest.person_id
+                  }
+                }));
+              }
+            });
           });
 
           if (event.venue && doc.where({ type: '-mobiledoc-location-card', attributes: { '-mobiledoc-locationId': event.venue.location_id }}).length === 0) {
             let insertAt = doc.content.length;
-            doc.insertText(insertAt, '\uFFFC\n');
+            doc.insertText(insertAt, '\uFFFC\n', AdjacentBoundaryBehaviour.preserve);
             doc.addAnnotations(new LocationCard({
               start: insertAt,
               end: insertAt + 1,
@@ -164,18 +191,17 @@ export default class QTCSource extends Document {
             }));
           }
 
-          let locationName;
           if (event.venue) {
             doc.insertText(start, '\uFFFC');
             end = start + 1;
-            locationName = new LocationName({
+            annotations.push(new LocationName({
               start,
               end: start + 1,
               attributes: {
                 id: event.venue.location_id.toString(),
                 extendedAddress: event.venue.extendedAddress
               }
-            });
+            }));
           }
 
           if (event.description) {
@@ -190,10 +216,7 @@ export default class QTCSource extends Document {
             end = start + description.content.length;
           }
 
-          if (locationName) {
-            doc.addAnnotations(locationName);
-          }
-          doc.addAnnotations(lineBreak, new ListItem({
+          doc.addAnnotations(...annotations, new ListItem({
             start: listItemStart,
             end
           }));
@@ -244,6 +267,25 @@ export default class QTCSource extends Document {
         doc.deleteText(card.start, card.start + 1);
         doc.where({ id: card.id }).set({ type: '-qtc-person' }).rename({ attributes: { '-mobiledoc-personId': '-qtc-id' } });
       }
+      doc.where({ type: '-qtc-byline' }).update((byline: any) => {
+        let attrs = byline.attributes.attributes;
+        let people = attrs['-qtc-people'].map((id: string) => {
+          let person = allPeople.find((person: any) => id == person.id);
+          return {
+            id: person.id,
+            name: person.name
+          };
+        });
+        doc.replaceAnnotation(byline, new Byline({
+          start: byline.start,
+          end: byline.end,
+          attributes: {
+            byline: attrs['-qtc-byline'],
+            people
+          }
+        }));
+      });
+
     }
 
     let locationIds: string[] = [];

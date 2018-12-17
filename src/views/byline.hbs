@@ -1,0 +1,1 @@
+<div>{{attrs.byline}} {{#each attrs.people as |person idx|}}<a href="#person-{{person.id}}">{{person.name}}</a>{{#if (not (is-last-item ../attrs.people idx))}},{{/if}} {{/each}}</div>

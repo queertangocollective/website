@@ -1,3 +1,4 @@
+export { default as Byline } from './byline';
 export { default as Gallery } from './gallery';
 export { default as Location } from './location';
 export { default as LocationName } from './location-name';
