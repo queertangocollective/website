@@ -358,8 +358,9 @@ export default class QTCSource extends Document {
       posts.forEach((post: any) => {
         let body = MobiledocSource.fromRaw(JSON.parse(post.body));
         let photos = [...body.where({ type: '-mobiledoc-photo-card' }).sort()];
-        if (photos.length) {
-          photoIds.push(photos[0].attributes.photoId);
+        let photoId = photos.length ? photos[0].attributes.photoId : null;
+        if (photoId) {
+          photoIds.push(photoId);
         }
         let firstParagraph = [...body.where({ type: '-mobiledoc-p' }).sort()][0];
         let description = body.content.slice(firstParagraph.start, firstParagraph.end);
@@ -372,7 +373,7 @@ export default class QTCSource extends Document {
               slug: post.slug,
               title: post.title,
               description,
-              photoId: photos[0].attributes.photoId,
+              photoId
             }
           }));
         });
