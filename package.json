@@ -25,9 +25,7 @@
     "handlebars": "^4.0.12",
     "js-beautify": "^1.8.9",
     "knex": "^0.16.2",
-    "pg": "^7.4.1"
-  },
-  "devDependencies": {
+    "pg": "^7.4.1",
     "ts-node": "^7.0.1",
     "typescript": "^3.2.2"
   }
