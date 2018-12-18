@@ -9,7 +9,7 @@ let app = website(knex({
   connection: process.env['PGCONNECTION']
 }));
 
-let port = process.env['NODE_PORT'];
+let port = process.env['PORT'];
 app.listen(port, () => {
   console.log(`ℹ️ Listening on port ${port}`);
 });

@@ -10,5 +10,5 @@ The configuration for this application is a connection string to Postgres, the d
 
 ```
 PGCONNECTION=postgresql:///queertangocollective_dev
-NODE_PORT=80
+PORT=80
 ```
