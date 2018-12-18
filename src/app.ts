@@ -81,88 +81,74 @@ export default function (db: knex) {
     });
   });
 
-  app.get('*', function (req, res) {
+  app.get('*', async function (req, res) {
     if (req.path === '/home') {
       res.redirect(`${req.protocol}://${req.get('host')}`);
       return;
     }
-    db.select().from('groups').where({ hostname: req.get('host') }).then(([group]: any[]) => {
-      if (group == null) {
-        return;
-      }
+    let [group] = await db.select().from('groups').where({ hostname: req.get('host') });
+    if (group == null) {
+      return;
+    }
+    let sections = await db.select().from('channels').where({ group_id: group.id });
+    let slug = req.path.slice(1).replace(/\.json$/, '').replace(/\.html$/, '').replace(/\.hir$/, '') || 'home';
+  
+    try {
+      let isJSON = req.path.match(/\.json$/);
+      let isHIR = req.path.match(/\.hir$/);
+      console.log(`ℹ️ [${group.hostname}] Loading post /${slug}`);
 
-      db.select().from('channels').where({ group_id: group.id }).then((sections: any[]) => {
-        let slug = req.path.slice(1).replace(/\.json$/, '').replace(/\.html$/, '').replace(/\.hir$/, '') || 'home';
-        let isJSON = req.path.match(/\.json$/);
-        let isHIR = req.path.match(/\.hir$/);
-        console.log(`ℹ️ [${group.hostname}] Loading post /${slug}`);
-
-        db.select().from('posts').where({ slug, group_id: group.id, published: true }).then((posts: any) => {
-          if (posts.length) {
-            return QTCSource.fromRaw(db, group.id, posts[0]);
+      let [post] = await db.select().from('posts').where({ slug, group_id: group.id, published: true });
+      let doc = await QTCSource.fromRaw(db, group.id, post);
+      res.format({
+        'text/plain'() {
+          res.send(doc.content);
+        },
+        'text/html'() {
+          if (isJSON) {
+            res.type('json');
+            res.send(doc.toJSON());
+          } else if (isHIR) {
+            res.type('json');
+            res.send(new HIR(doc).toJSON());
           } else {
-            throw new Error('Not Found');
+            let renderer = new Renderer();
+            let paragraph = [...doc.where({ type: '-offset-paragraph' }).sort()][0];
+            let photo = [...doc.where({ type: '-qtc-photo' }).sort()][0];
+            let body = renderer.render(doc);
+            let template = compile(readFileSync(join(__dirname, 'views/index.hbs')).toString());
+
+            res.send(html(template({
+              yield: body,
+              group: group,
+              post: {
+                title: post.title,
+                description: paragraph ? doc.content.slice(paragraph.start, paragraph.end).trim() : null,
+                url: `${req.protocol}://${group.hostname}/${slug}`,
+                image: photo ? photo.attributes.url : null,
+                section: sections.find((section: any) => section.id == post.channel_id)
+              },
+              sections: sections
+            }), {
+              unformatted: ['code', 'pre', 'em', 'strong', 'span', 'title'],
+              indent_inner_html: true,
+              indent_char: ' ',
+              indent_size: 2
+            }));
           }
-        }).then((doc: QTCSource) => {
-          res.format({
-            'text/plain'() {
-              res.send(doc.content);
-            },
-            'text/html'() {
-              if (isJSON) {
-                res.type('json');
-                res.send(doc.toJSON());
-              } else if (isHIR) {
-                res.type('json');
-                res.send(new HIR(doc).toJSON());
-              } else {
-                let renderer = new Renderer();
-                let titles = doc.where({ type: '-offset-heading', attributes: { '-offset-level': 1 } });
-                let title = [...titles][0];
-                let paragraph = [...doc.where({ type: '-offset-paragraph' }).sort()][0];
-                let photo = [...doc.where({ type: '-qtc-photo' }).sort()][0];
-                let headline = doc.content.slice(title.start, title.end - 1);
-                let body = renderer.render(doc);
-                let template = compile(readFileSync(join(__dirname, 'views/index.hbs')).toString());
-
-                if (slug === 'home') {
-                  doc.deleteText(title.start, title.end);
-                  titles.remove();
-                }
-
-                res.send(html(template({
-                  yield: body,
-                  group: group,
-                  post: {
-                    title: headline,
-                    description: paragraph ? doc.content.slice(paragraph.start, paragraph.end).trim() : null,
-                    url: `${req.protocol}://${group.hostname}/${slug}`,
-                    image: photo ? photo.attributes.url : null,
-                    section: sections.find(section => section.id == title.attributes.channelId)
-                  },
-                  sections: sections
-                }), {
-                    unformatted: ['code', 'pre', 'em', 'strong', 'span', 'title'],
-                    indent_inner_html: true,
-                    indent_char: ' ',
-                    indent_size: 2
-                  }));
-              }
-            },
-            'application/json'() {
-              res.send(doc.toJSON());
-            }
-          });
-        }, (error: Error) => {
-          console.log(`🚫 [${group.hostname}] Error loading ${slug}`, error);
-          let template = compile(readFileSync(join(__dirname, 'views/404.hbs')).toString());
-          res.status(404).send(html(template({
-            group: group,
-            sections: sections
-          })));
-        });
+        },
+        'application/json'() {
+          res.send(doc.toJSON());
+        }
       });
-    });
+    } catch (error) {
+      console.log(`🚫 [${group.hostname}] Error loading ${slug}`, error);
+      let template = compile(readFileSync(join(__dirname, 'views/404.hbs')).toString());
+      res.status(404).send(html(template({
+        group: group,
+        sections: sections
+      })));
+    }
   });
 
   return app;

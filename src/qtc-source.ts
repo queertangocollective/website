@@ -65,19 +65,21 @@ export default class QTCSource extends Document {
 
   static async fromRaw(db: knex, groupId: string, json: any) {
     let doc = MobiledocSource.fromRaw(JSON.parse(json.body));
-    doc.insertText(0, json.title + '\n');
-    doc.addAnnotations(new ParseAnnotation({
-      start: json.title.length,
-      end: json.title.length + 1
-    }));
-    doc.addAnnotations(new Heading({
-      start: 0,
-      end: json.title.length + 1,
-      attributes: {
-        level: 1,
-        channelId: json.channel_id
-      }
-    }));
+    if (json.slug !== 'home') {
+      doc.insertText(0, json.title + '\n');
+      doc.addAnnotations(new ParseAnnotation({
+        start: json.title.length,
+        end: json.title.length + 1
+      }));
+      doc.addAnnotations(new Heading({
+        start: 0,
+        end: json.title.length + 1,
+        attributes: {
+          level: 1,
+          channelId: json.channel_id
+        }
+      }));
+    }
 
     doc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
 
