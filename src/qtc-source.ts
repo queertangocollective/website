@@ -23,7 +23,7 @@ import {
   Schedule
 } from './annotations';
 import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard } from './mobiledoc-source';
-import { Anchor as MobiledocLink } from '@atjson/source-mobiledoc';
+// import { Anchor as MobiledocLink } from '@atjson/source-mobiledoc';
 import { formatDateRange } from './renderer';
 import * as knex from 'knex';
 
