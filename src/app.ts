@@ -66,9 +66,9 @@ export default function (db: knex) {
       console.error(error);
     });
   });
-  /*
+
   app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
-    getGroup(req, res).then((group) => {
+    db.select().from('groups').where({ hostname: req.get('host') }).then(([group]: any[]) => {
       if (group == null) return;
   
       console.log(`ℹ️ [${group.hostname}] Sending Apple Pay info`);
@@ -79,7 +79,7 @@ export default function (db: knex) {
       res.send(error);
       console.error(error);
     });
-  });*/
+  });
 
   app.get('*', function (req, res) {
     if (req.path === '/home') {
@@ -99,6 +99,7 @@ export default function (db: knex) {
 
         db.select().from('posts').where({ slug }).then((posts: any) => {
           if (posts.length) {
+            console.log(posts[0]);
             return QTCSource.fromRaw(db, posts[0]);
           } else {
             throw new Error('Not Found');
