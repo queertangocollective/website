@@ -97,10 +97,9 @@ export default function (db: knex) {
         let isHIR = req.path.match(/\.hir$/);
         console.log(`ℹ️ [${group.hostname}] Loading post /${slug}`);
 
-        db.select().from('posts').where({ slug }).then((posts: any) => {
+        db.select().from('posts').where({ slug, group_id: group.id, published: true }).then((posts: any) => {
           if (posts.length) {
-            console.log(posts[0]);
-            return QTCSource.fromRaw(db, posts[0]);
+            return QTCSource.fromRaw(db, group.id, posts[0]);
           } else {
             throw new Error('Not Found');
           }
