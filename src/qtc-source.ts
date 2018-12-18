@@ -23,7 +23,6 @@ import {
   Schedule
 } from './annotations';
 import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard } from './mobiledoc-source';
-// import { Anchor as MobiledocLink } from '@atjson/source-mobiledoc';
 import { formatDateRange } from './renderer';
 import * as knex from 'knex';
 
@@ -66,21 +65,19 @@ export default class QTCSource extends Document {
 
   static async fromRaw(db: knex, groupId: string, json: any) {
     let doc = MobiledocSource.fromRaw(JSON.parse(json.body));
-    if (json.slug !== 'home') {
-      doc.insertText(0, json.title + '\n');
-      doc.addAnnotations(new ParseAnnotation({
-        start: json.title.length,
-        end: json.title.length + 1
-      }));
-      doc.addAnnotations(new Heading({
-        start: 0,
-        end: json.title.length + 1,
-        attributes: {
-          level: 1,
-          channelId: json.channel_id
-        }
-      }));
-    }
+    doc.insertText(0, json.title + '\n');
+    doc.addAnnotations(new ParseAnnotation({
+      start: json.title.length,
+      end: json.title.length + 1
+    }));
+    doc.addAnnotations(new Heading({
+      start: 0,
+      end: json.title.length + 1,
+      attributes: {
+        level: 1,
+        channelId: json.channel_id
+      }
+    }));
 
     doc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
 
@@ -353,37 +350,6 @@ export default class QTCSource extends Document {
     [...galleryCards].forEach((gallery: GalleryCard) => {
       photoIds.push(...gallery.attributes.photoIds);
     });
-
-    /*
-    let relativeLinks = doc.where({ type: '-mobiledoc-a' })
-                           .where((link: MobiledocLink) => link.attributes.href.startsWith('/'));
-    let slugs = relativeLinks.map((link: MobiledocLink) => link.attributes.href.slice(1));
-    if (slugs.length) {
-      let posts = await db.select().from('posts').whereIn('slug', slugs);
-      posts.forEach((post: any) => {
-        let body = MobiledocSource.fromRaw(JSON.parse(post.body));
-        let photos = [...body.where({ type: '-mobiledoc-photo-card' }).sort()];
-        let photoId = photos.length ? photos[0].attributes.photoId : null;
-        if (photoId) {
-          photoIds.push(photoId);
-        }
-        let firstParagraph = [...body.where({ type: '-mobiledoc-p' }).sort()][0];
-        let description = body.content.slice(firstParagraph.start, firstParagraph.end);
-
-        relativeLinks.where({ attributes: { '-mobiledoc-href': `/${post.slug}` } }).update((link: MobiledocLink) => {
-          doc.replaceAnnotation(link, new PostEmbed({
-            start: link.start,
-            end: link.end,
-            attributes: {
-              slug: post.slug,
-              title: post.title,
-              description,
-              photoId
-            }
-          }));
-        });
-      });
-    }*/
 
     if (photoIds.length) {
       let allPhotos = await db.select().from('photos').where({ group_id: groupId }).whereIn('id', compact(photoIds));

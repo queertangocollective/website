@@ -117,12 +117,19 @@ export default function (db: knex) {
                 res.send(new HIR(doc).toJSON());
               } else {
                 let renderer = new Renderer();
-                let title = [...doc.where({ type: '-offset-heading', attributes: { '-offset-level': 1 } })][0];
+                let titles = doc.where({ type: '-offset-heading', attributes: { '-offset-level': 1 } });
+                let title = [...titles][0];
                 let paragraph = [...doc.where({ type: '-offset-paragraph' }).sort()][0];
                 let photo = [...doc.where({ type: '-qtc-photo' }).sort()][0];
                 let headline = doc.content.slice(title.start, title.end - 1);
                 let body = renderer.render(doc);
                 let template = compile(readFileSync(join(__dirname, 'views/index.hbs')).toString());
+
+                if (slug === 'home') {
+                  doc.deleteText(title.start, title.end);
+                  titles.remove();
+                }
+
                 res.send(html(template({
                   yield: body,
                   group: group,
