@@ -354,6 +354,7 @@ export default class QTCSource extends Document {
       photoIds.push(...gallery.attributes.photoIds);
     });
 
+    /*
     let relativeLinks = doc.where({ type: '-mobiledoc-a' })
                            .where((link: MobiledocLink) => link.attributes.href.startsWith('/'));
     let slugs = relativeLinks.map((link: MobiledocLink) => link.attributes.href.slice(1));
@@ -382,7 +383,7 @@ export default class QTCSource extends Document {
           }));
         });
       });
-    }
+    }*/
 
     if (photoIds.length) {
       let allPhotos = await db.select().from('photos').where({ group_id: groupId }).whereIn('id', compact(photoIds));
