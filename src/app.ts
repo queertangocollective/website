@@ -24,7 +24,8 @@ export default function (db: knex) {
   app.get('/health', (_req, res) => {
     db.select('id').from('groups').then(() => {
       res.send('❤️');
-    }, () => {
+    }, (error) => {
+      console.error(error);
       res.status(500).send('💔');
     });
   });
