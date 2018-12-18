@@ -1,4 +1,4 @@
-# 💃 @queertangocollective/website
+# 💃 @queertangocollective/web
 
 Run websites under Queer Tango Collective using handlebars for templating and minimal frontend JavaScript to improve search ranking on Google and complexities of a single page web application.
 
