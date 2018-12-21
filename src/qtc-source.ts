@@ -426,6 +426,7 @@ export default class QTCSource extends Document {
 
     doc.where({ type: '-mobiledoc-small' }).update((small: Small) => {
       let footnote = doc.slice(small.start, small.end);
+      footnote.where({ start: 0, end: 0 }).remove();
 
       // Delete annotations that are in the footnote first
       doc.where(a => a.start >= small.start && a.end <= small.end).remove();
@@ -436,7 +437,6 @@ export default class QTCSource extends Document {
       doc.insertText(start, footnote.content, AdjacentBoundaryBehaviour.preserve);
       doc.addAnnotations(new Footnote({ start, end }));
       footnote.annotations.forEach(a => {
-        console.log(a);
         a.start += start;
         a.end += start;
         doc.addAnnotations(a);

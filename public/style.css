@@ -328,9 +328,11 @@ article figure.size-small:not(.align-left):not(.align-right) {
   text-align: center;
 }
 
-.footnote {
+.wide-container.footnote {
+  margin-top: 1rem;
   font-size: 0.8rem;
   line-height: 1rem;
+  border-top: 3px double #111111;
 }
 
 .post-embed {
