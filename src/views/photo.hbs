@@ -1,6 +1,6 @@
 {{#if (equals attrs.size 'large')}}
   <figure class="size-{{attrs.size}}">
-    <img src="{{attrs.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
+    <img src="{{annotation.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
     {{#if attrs.caption}}
       <figcaption>
         {{attrs.caption}}
@@ -10,7 +10,7 @@
 {{else if (equals attrs.size 'medium')}}
   <div class='wide-container'>
     <figure class="align-{{attrs.align}} size-{{attrs.size}}">
-      <img src="{{attrs.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
+      <img src="{{annotation.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
       {{#if attrs.caption}}
         <figcaption>
           {{attrs.caption}}
@@ -21,7 +21,7 @@
 {{else}}
   <div class='container clear-fix aligned-photo'>
     <figure class="align-{{attrs.align}} size-{{attrs.size}}">
-      <img src="{{attrs.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
+      <img src="{{annotation.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
       {{#if attrs.caption}}
         <figcaption>
           {{attrs.caption}}

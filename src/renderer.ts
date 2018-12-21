@@ -70,6 +70,7 @@ export default class HandlebarsRenderer extends Renderer {
       let template = compile(readFileSync(join(__dirname, 'views/', `${annotation.type}.hbs`)).toString());
       return template({
         yield: html.join(''),
+        annotation: annotation,
         attrs: annotation.attributes
       });
     }
