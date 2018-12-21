@@ -427,6 +427,7 @@ export default class QTCSource extends Document {
     doc.where({ type: '-mobiledoc-small' }).update((small: Small) => {
       let footnote = doc.content.slice(small.start, small.end);
       doc.removeAnnotation(small);
+      doc.deleteText(small.start, small.end);
       let start = doc.content.length;
       let end = start + footnote.length;
       doc.insertText(start, footnote, AdjacentBoundaryBehaviour.preserve);
