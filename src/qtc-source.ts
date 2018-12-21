@@ -186,7 +186,7 @@ export default class QTCSource extends Document {
             });
           });
 
-          if (event.venue && doc.where({ type: '-mobiledoc-location-card', attributes: { '-mobiledoc-locationId': event.venue.location_id }}).length === 0) {
+          if (event.venue && doc.where({ type: '-mobiledoc-location-card', attributes: { '-mobiledoc-locationId': event.venue.location_id.toString() }}).length === 0) {
             let insertAt = doc.content.length;
             doc.insertText(insertAt, '\uFFFC\n', AdjacentBoundaryBehaviour.preserve);
             doc.addAnnotations(new LocationCard({
