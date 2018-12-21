@@ -1,5 +1,5 @@
 import MobiledocSource from '@atjson/source-mobiledoc';
-import { ObjectAnnotation } from '@atjson/document';
+import { ObjectAnnotation, BlockAnnotation } from '@atjson/document';
 import OffsetSource, { LineBreak } from '@atjson/offset-annotations';
 
 export class GalleryCard extends ObjectAnnotation {
@@ -57,6 +57,11 @@ export class TicketCard extends ObjectAnnotation {
   };
 }
 
+export class Small extends BlockAnnotation {
+  static vendorPrefix = 'mobiledoc';
+  static type = 'small';
+}
+
 export default class QTCMobiledocSource extends MobiledocSource {
   static schema = [
     ...MobiledocSource.schema,
@@ -66,7 +71,8 @@ export default class QTCMobiledocSource extends MobiledocSource {
     PersonCard,
     PhotoCard,
     TicketCard,
-    LineBreak
+    LineBreak,
+    Small
   ];
 }
 

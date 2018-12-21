@@ -276,8 +276,7 @@ h4 {
 article > p,
 article > h1,
 article > h2,
-article > h3,
-article > small {
+article > h3 {
   display: block;
   max-width: calc(800px + 2rem);
   padding: 0.5rem 1rem;
@@ -326,6 +325,11 @@ article figure.size-medium {
 article figure.size-small:not(.align-left):not(.align-right) {
   width: 100%;
   text-align: center;
+}
+
+.footnote {
+  font-size: 0.8rem;
+  line-height: 1rem;
 }
 
 .post-embed {

@@ -20,9 +20,10 @@ import {
   Person,
   PostEmbed,
   Photo,
-  Schedule
+  Schedule,
+  Footnote
 } from './annotations';
-import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard } from './mobiledoc-source';
+import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard, Small } from './mobiledoc-source';
 import { formatDateRange } from './renderer';
 import * as knex from 'knex';
 
@@ -60,7 +61,8 @@ export default class QTCSource extends Document {
     Gallery,
     Location,
     LocationName,
-    Schedule
+    Schedule,
+    Footnote
   ];
 
   static async fromRaw(db: knex, groupId: string, json: any) {
@@ -421,6 +423,16 @@ export default class QTCSource extends Document {
         doc.removeAnnotation(heading);
       });
     });
+
+    doc.where({ type: '-mobiledoc-small' }).update((small: Small) => {
+      let footnote = doc.content.slice(small.start, small.end);
+      doc.removeAnnotation(small);
+      let start = doc.content.length;
+      let end = start + footnote.length;
+      doc.insertText(start, footnote, AdjacentBoundaryBehaviour.preserve);
+      doc.addAnnotations(new Footnote({ start, end }));
+    });
+
     return new this(doc.convertTo(OffsetSource).toJSON());
   }
 }
