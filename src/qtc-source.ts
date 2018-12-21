@@ -186,7 +186,7 @@ export default class QTCSource extends Document {
             });
           });
 
-          if (event.venue && doc.where({ type: '-mobiledoc-location-card', attributes: { '-mobiledoc-locationId': event.venue.location_id.toString() }}).length === 0) {
+          if (event.venue && doc.where(a => a.type === 'location-card' && a.attributes.locationId == event.venue.location_id).length === 0) {
             let insertAt = doc.content.length;
             doc.insertText(insertAt, '\uFFFC\n', AdjacentBoundaryBehaviour.preserve);
             doc.addAnnotations(new LocationCard({
@@ -425,13 +425,22 @@ export default class QTCSource extends Document {
     });
 
     doc.where({ type: '-mobiledoc-small' }).update((small: Small) => {
-      let footnote = doc.content.slice(small.start, small.end);
-      doc.removeAnnotation(small);
+      let footnote = doc.slice(small.start, small.end);
+
+      // Delete annotations that are in the footnote first
+      doc.where(a => a.start >= small.start && a.end <= small.end).remove();
       doc.deleteText(small.start, small.end);
+
       let start = doc.content.length;
-      let end = start + footnote.length;
-      doc.insertText(start, footnote, AdjacentBoundaryBehaviour.preserve);
+      let end = start + footnote.content.length;
+      doc.insertText(start, footnote.content, AdjacentBoundaryBehaviour.preserve);
       doc.addAnnotations(new Footnote({ start, end }));
+      footnote.annotations.forEach(a => {
+        console.log(a);
+        a.start += start;
+        a.end += start;
+        doc.addAnnotations(a);
+      });
     });
 
     return new this(doc.convertTo(OffsetSource).toJSON());
