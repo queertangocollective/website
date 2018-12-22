@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <html lang="{{group.locale}}">
   <head>
-    <title>{{post.title}} · {{group.name}}</title>
+    <title>
+      {{~#if (equals post.title group.name)~}}
+        {{group.name}}
+      {{~else~}}
+        {{post.title}} · {{group.name}}
+      {{~/if~}}
+    </title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="/favicon.png">
