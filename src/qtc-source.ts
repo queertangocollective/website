@@ -193,8 +193,7 @@ export default class QTCSource extends Document {
               start: insertAt,
               end: insertAt + 1,
               attributes: {
-                locationId: event.venue.location_id,
-                extendedAddress: event.venue.extended_address
+                locationId: event.venue.location_id
               }
             }));
           }
@@ -207,7 +206,7 @@ export default class QTCSource extends Document {
               end: start + 1,
               attributes: {
                 id: event.venue.location_id.toString(),
-                extendedAddress: event.venue.extendedAddress
+                extendedAddress: event.venue.extended_address
               }
             }));
           }
