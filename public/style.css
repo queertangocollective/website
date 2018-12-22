@@ -332,7 +332,7 @@ article figure.size-small:not(.align-left):not(.align-right) {
   margin-top: 1rem;
   font-size: 0.8rem;
   line-height: 1rem;
-  border-top: 3px double #111111;
+  border-top: 3px double #000;
 }
 
 .post-embed {
@@ -404,6 +404,10 @@ article .wide-container {
 
 .wide-container section {
   padding: 1rem;
+}
+
+.person {
+  border-bottom: 1px solid #000;
 }
 
 .person p,
