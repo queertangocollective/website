@@ -1,14 +1,14 @@
 {{#if (equals attrs.size 'large')}}
   <div class="{{attrs.style}} size-{{attrs.size}}">
     {{#each attrs.photos as |photo|}}
-      <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{photo.url}}" width={{photo.width}} height={{photo.height}}>
+      <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{image-url photo.url}}" width={{photo.width}} height={{photo.height}}>
     {{/each}}
   </div>
 {{else if (equals attrs.size 'medium')}}
   <div class='wide-container clear-fix'>
     <div class="{{attrs.style}} size-{{attrs.size}}">
       {{#each attrs.photos as |photo|}}
-        <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{photo.url}}" width={{photo.width}} height={{photo.height}}>
+        <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{image-url photo.url}}" width={{photo.width}} height={{photo.height}}>
       {{/each}}
     </div>
   </div>
@@ -16,7 +16,7 @@
   <div class='container clear-fix'>
     <div class="{{attrs.style}} size-{{attrs.size}}">
       {{#each attrs.photos as |photo|}}
-        <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{photo.url}}" width={{photo.width}} height={{photo.height}}>
+        <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{image-url photo.url}}" width={{photo.width}} height={{photo.height}}>
       {{/each}}
     </div>
   </div>

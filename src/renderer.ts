@@ -8,6 +8,14 @@ registerHelper('equals', function(a, b) {
   return a === b;
 });
 
+registerHelper('image-url', function(url) {
+  let s3Key = url.replace(`https://${process.env['CLOUDFRONT_URL']}/`, '')
+                 .replace(`https://${process.env['AWS_BUCKET_NAME']}.s3.amazonaws.com/`, '')
+                 .replace(/%2F/g, '/')
+                 .replace(/\+/g, ' ');
+  return `https://${process.env['CLOUDFRONT_URL']}/${s3Key}`;
+});
+
 registerHelper('not', function(a) {
   return !a;
 });
@@ -70,7 +78,6 @@ export default class HandlebarsRenderer extends Renderer {
       let template = compile(readFileSync(join(__dirname, 'views/', `${annotation.type}.hbs`)).toString());
       return template({
         yield: html.join(''),
-        annotation: annotation,
         attrs: annotation.attributes
       });
     }
