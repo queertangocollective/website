@@ -99,7 +99,10 @@ export default class QTCSource extends Document {
                               .leftJoin('venues', {
                                 'venues.id': 'events.venue_id'
                               })
-                              .orderBy('events.starts_at');
+                              .orderBy([
+                                { column: 'events.starts_at', order: 'desc' },
+                                { column: 'events.ends_at' }
+                              ]);
       let allGuests = await db.select().from('guests').whereIn('event_id', eventIds);
 
       allEvents.forEach((event: any) => {
