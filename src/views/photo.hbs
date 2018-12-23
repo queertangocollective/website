@@ -1,6 +1,6 @@
 {{#if (equals attrs.size 'large')}}
   <figure class="size-{{attrs.size}}">
-    <img src="{{annotation.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
+    <img src="{{image-url attrs.url}}"{{#if attrs.altText}} alt="{{attrs.altText}}"{{/if}}>
     {{#if attrs.caption}}
       <figcaption>
         {{attrs.caption}}
