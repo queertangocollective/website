@@ -65,7 +65,7 @@ export default class QTCSource extends Document {
     Footnote
   ];
 
-  static async fromRaw(db: knex, groupId: string, json: any) {
+  static async fromRaw(db: knex, group: any, json: any) {
     let doc = MobiledocSource.fromRaw(JSON.parse(json.body));
     if (json.slug !== 'home') {
       doc.insertText(0, json.title + '\n');
@@ -94,7 +94,7 @@ export default class QTCSource extends Document {
     if (eventIds.length) {
       let allEvents = await db.select(['events.*', db.raw('to_json(venues.*) as venue')])
                               .from('events')
-                              .where({ group_id: groupId })
+                              .where({ group_id: group.id })
                               .whereIn('events.id', eventIds)
                               .leftJoin('venues', {
                                 'venues.id': 'events.venue_id'
@@ -138,7 +138,7 @@ export default class QTCSource extends Document {
           }));
           start = end;
 
-          let range = formatDateRange(event.starts_at, event.ends_at);
+          let range = formatDateRange(event.starts_at, event.ends_at, group.timezone);
           end = start + range.length + 1;
           doc.insertText(start, range + '\n');
           annotations.push(new LineBreak({
@@ -241,7 +241,7 @@ export default class QTCSource extends Document {
     });
 
     if (personIds.length) {
-      let allPeople = await db.select().from('people').where({ group_id: groupId }).whereIn('id', personIds);
+      let allPeople = await db.select().from('people').where({ group_id: group.id }).whereIn('id', personIds);
       for (let card of personCards) {
         let person = allPeople.find((person: any) => {
           return card.attributes.personId === person.id;
@@ -305,7 +305,7 @@ export default class QTCSource extends Document {
     });
 
     if (locationIds.length) {
-      let allLocations = await db.select().from('locations').where({ group_id: groupId }).whereIn('id', compact(locationIds));
+      let allLocations = await db.select().from('locations').where({ group_id: group.id }).whereIn('id', compact(locationIds));
       for (let card of locationCards) {
         let location = allLocations.find((loc: any) => {
           return card.attributes.locationId == loc.id;
@@ -358,7 +358,7 @@ export default class QTCSource extends Document {
     });
 
     if (photoIds.length) {
-      let allPhotos = await db.select().from('photos').where({ group_id: groupId }).whereIn('id', compact(photoIds));
+      let allPhotos = await db.select().from('photos').where({ group_id: group.id }).whereIn('id', compact(photoIds));
       photoCards.update((photoCard: PhotoCard) => {
         let photo = allPhotos.find((photo: any) => photo.id === photoCard.attributes.photoId);
         if (photo) {

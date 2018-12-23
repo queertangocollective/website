@@ -99,7 +99,7 @@ export default function (db: knex) {
       console.log(`ℹ️ [${group.hostname}] Loading post /${slug}`);
 
       let [post] = await db.select().from('posts').where({ slug, group_id: group.id, published: true });
-      let doc = await QTCSource.fromRaw(db, group.id, post);
+      let doc = await QTCSource.fromRaw(db, group, post);
       res.format({
         'text/plain'() {
           res.send(doc.content);

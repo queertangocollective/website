@@ -29,8 +29,9 @@ registerHelper('is-last-item', function(list, index) {
 });
 
 
-function isSameDay(a: Date, b: Date) {
+function isSameDay(a: Date, b: Date, timeZone: string) {
   let date = new Intl.DateTimeFormat('en-US', {
+    timeZone,
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -38,16 +39,18 @@ function isSameDay(a: Date, b: Date) {
   return date.format(a) === date.format(b);
 }
 
-function isSameMonth(a: Date, b: Date) {
+function isSameMonth(a: Date, b: Date, timeZone: string) {
   let date = new Intl.DateTimeFormat('en-US', {
+    timeZone,
     year: 'numeric',
     month: 'long'
   });
   return date.format(a) === date.format(b);
 }
 
-export function formatDateRange(start: Date, end: Date) {
+export function formatDateRange(start: Date, end: Date, timeZone: string) {
   let long = new Intl.DateTimeFormat('en-US', {
+    timeZone,
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -55,17 +58,19 @@ export function formatDateRange(start: Date, end: Date) {
     minute: 'numeric'
   });
   let time = new Intl.DateTimeFormat('en-US', {
+    timeZone,
     hour: 'numeric',
     minute: 'numeric'
   });
   let day = new Intl.DateTimeFormat('en-US', {
+    timeZone,
     day: 'numeric',
     hour: 'numeric',
     minute: 'numeric'
   });
-  if (isSameDay(start, end)) {
+  if (isSameDay(start, end, timeZone)) {
     return long.format(start) + ' - ' + time.format(end);
-  } else if (isSameMonth(start, end)) {
+  } else if (isSameMonth(start, end, timeZone)) {
     return long.format(start) + ' - ' + day.format(end);
   }
   return long.format(start) + ' - ' + long.format(end);
