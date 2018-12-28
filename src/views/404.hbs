@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="{{group.locale}}">
+<html lang="{{attrs.locale}}">
   <head>
-    <title>Not Found · {{group.name}}</title>
+    <title>Not Found · {{attrs.siteName}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="/favicon.png">
@@ -13,19 +13,19 @@
       <header>
         <h5>
           <a href="/" id="logo"><img src="https://builds.queertangocollective.org/admin/assets/images/black-logo-62ff338d6c4c313c8a096da504da0228.png"
-              alt="{{group.name}}" title="{{group.name}}"></a>{{~_~}}
-          <a href="/" id="text-logo">{{group.name}}</a>
+              alt="{{attrs.siteName}}" title="{{attrs.siteName}}"></a>{{~_~}}
+          <a href="/" id="text-logo">{{attrs.siteName}}</a>
         </h5>
         <nav>
           <ul>
-            {{#each sections as |section|}}
+            {{#each attrs.sections as |section|}}
               <li>
                 {{#if (equals section.slug "home")}}
-                  <a href="/" {{#if (equals section.id ../post.section.id)}} class="active" {{/if}}>
+                  <a href="/">
                     {{~section.name~}}
                   </a>
                 {{else}}
-                  <a href="/{{section.slug}}" {{#if (equals section.id ../post.section.id)}} class="active" {{/if}}>
+                  <a href="/{{section.slug}}">
                     {{~section.name~}}
                   </a>
                 {{/if}}
@@ -42,7 +42,7 @@
       </article>
     </main>
     <footer>
-      <a href="mailto:{{group.email}}">{{group.name}}</a>
+      <a href="mailto:{{attrs.siteEmail}}">{{attrs.siteName}}</a>
     </footer>
     <script src="/scripts/header.js"></script>
   </body>

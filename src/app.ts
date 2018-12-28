@@ -158,8 +158,17 @@ export default function (db: knex) {
       console.log(`🚫 [${group.hostname}] Error loading ${slug}`, error);
       let template = compile(readFileSync(join(__dirname, 'views/404.hbs')).toString());
       res.status(404).send(html(template({
-        group: group,
-        sections: sections
+        attrs: {
+          locale: group.locale,
+          siteName: group.name,
+          siteEmail: group.email,
+          sections: sections.map((section: any) => {
+            return {
+              slug: section.slug,
+              name: section.name
+            }
+          })
+        }
       })));
     }
   });

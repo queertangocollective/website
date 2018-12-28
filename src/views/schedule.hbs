@@ -2,21 +2,5 @@
   <div>
     <h3 class="sticky">Schedule</h3>
     <ol>{{{yield}}}</ol>
-      {{#each attrs.events as |event|}}
-        <li>
-          <h4>{{event.name}}</h4>
-          {{event}}
-          {{!date-range event.starts_at event.ends_at}}<br>
-          {{#if event.venue}}
-            <a href="#{{event.venue.name}}">{{event.venue.name}}</a><br>
-          {{/if}}
-          {{#each event.guests as |guest|}}
-            {{guest.role}} <a href="#{{guest.name}}">{{guest.name}}</a>
-          {{/each}}
-          {{#if description}}
-            {{description}}
-          {{/if}}
-        </li>
-      {{/each}}
   </div>
 </div>
