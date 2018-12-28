@@ -77,10 +77,14 @@ export function formatDateRange(start: Date, end: Date, timeZone: string) {
 }
 
 export default class HandlebarsRenderer extends Renderer {
+  templateFor(type: string) {
+    return readFileSync(join(__dirname, 'views/', `${type}.hbs`)).toString()
+  }
+
   *renderAnnotation(annotation: Annotation) {
     if (annotation.type !== 'unknown') {
       let html = yield;
-      let template = compile(readFileSync(join(__dirname, 'views/', `${annotation.type}.hbs`)).toString());
+      let template = compile(this.templateFor(annotation.type));
       return template({
         yield: html.join(''),
         attrs: annotation.attributes
