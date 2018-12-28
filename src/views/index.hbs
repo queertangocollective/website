@@ -23,6 +23,15 @@
     <meta property="og:title" content="{{post.title}}" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="{{post.url}}" />
+
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{post.url}}">
+    <meta property="twitter:title" content="{{post.title}}">
+    <meta property="twitter:description" content="{{post.description}}">
+    {{#if post.image}}
+      <meta property="twitter:image" content="{{post.image}}">
+    {{/if}}
+
     <link rel="stylesheet" href="/style.css">
   </head>
   <body>
