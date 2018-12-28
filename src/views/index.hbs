@@ -17,7 +17,7 @@
       <meta property="og:description" content="{{post.description}}" />
     {{/if}}
     {{#if post.image}}
-      <meta property="og:image" content="{{post.image}}" />
+      <meta property="og:image" content="{{image-url post.image}}" />
     {{/if}}
     <meta property="og:site_name" content="{{group.name}}" />
     <meta property="og:title" content="{{post.title}}" />
@@ -29,7 +29,7 @@
     <meta property="twitter:title" content="{{post.title}}">
     <meta property="twitter:description" content="{{post.description}}">
     {{#if post.image}}
-      <meta property="twitter:image" content="{{post.image}}">
+      <meta property="twitter:image" content="{{image-url post.image}}">
     {{/if}}
 
     <link rel="stylesheet" href="/style.css">
