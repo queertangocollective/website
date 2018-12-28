@@ -7,6 +7,7 @@ import { html } from 'js-beautify';
 import { compile } from 'handlebars';
 import { HIR } from '@atjson/hir';
 import * as knex from 'knex';
+import { Page } from './annotations';
 
 export default function (db: knex) {
   let app = express();
@@ -100,6 +101,34 @@ export default function (db: knex) {
 
       let [post] = await db.select().from('posts').where({ slug, group_id: group.id, published: true });
       let doc = await QTCSource.fromRaw(db, group, post);
+      let paragraph = [...doc.where({ type: '-offset-paragraph' }).sort()][0];
+      let photo = [...doc.where({ type: '-qtc-photo' }).sort()][0];
+      let section = sections.find((section: any) => section.id == post.channel_id);
+
+      doc.addAnnotations(new Page({
+        start: 0,
+        end: doc.content.length,
+        attributes: {
+          locale: group.locale,
+          title: post.title,
+          description: paragraph ? doc.content.slice(paragraph.start, paragraph.end).trim() : null,
+          url: `${req.protocol}://${group.hostname}/${slug}`,
+          image: photo ? photo.attributes.url : null,
+          section: section ? {
+            slug: section.slug,
+            name: section.name
+          } : null,
+          siteName: group.name,
+          siteEmail: group.email,
+          sections: sections.map((section: any) => {
+            return {
+              slug: section.slug,
+              name: section.name
+            }
+          })
+        }
+      }));
+
       res.format({
         'text/plain'() {
           res.send(doc.content);
@@ -113,23 +142,7 @@ export default function (db: knex) {
             res.send(new HIR(doc).toJSON());
           } else {
             let renderer = new Renderer();
-            let paragraph = [...doc.where({ type: '-offset-paragraph' }).sort()][0];
-            let photo = [...doc.where({ type: '-qtc-photo' }).sort()][0];
-            let body = renderer.render(doc);
-            let template = compile(readFileSync(join(__dirname, 'views/index.hbs')).toString());
-
-            res.send(html(template({
-              yield: body,
-              group: group,
-              post: {
-                title: post.title,
-                description: paragraph ? doc.content.slice(paragraph.start, paragraph.end).trim() : null,
-                url: `${req.protocol}://${group.hostname}/${slug}`,
-                image: photo ? photo.attributes.url : null,
-                section: sections.find((section: any) => section.id == post.channel_id)
-              },
-              sections: sections
-            }), {
+            res.send(html(renderer.render(doc), {
               unformatted: ['code', 'pre', 'em', 'strong', 'span', 'title'],
               indent_inner_html: true,
               indent_char: ' ',

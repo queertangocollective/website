@@ -92,9 +92,6 @@ export default class HandlebarsRenderer extends Renderer {
 
   *'root'() {
     let html = yield;
-    let template = compile(readFileSync(join(__dirname, 'views/root.hbs')).toString());
-    return template({
-      yield: html.join('')
-    });
+    return html.join('');
   }
 }

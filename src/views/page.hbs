@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="{{attrs.locale}}">
+  <head>
+    <title>
+      {{~#if (equals attrs.title attrs.siteName)~}}
+        {{attrs.siteName}}
+      {{~else~}}
+        {{attrs.title}} · {{attrs.siteName}}
+      {{~/if~}}
+    </title>
+    <meta name="description" content="Queer Tango Collective aims to enable personal and social transformation through the study, practice and enjoyment of the Argentine tango dance and music." />
+    <meta name="keywords" content="Queer Tango Collective, Queer Tango Collectivo, QTC, Queer Tango, Queer Tango Club, Queer Tango NYC, Queer Tango New York, Tango, Tango Argentino, Tango New York, Tango in New York, Dancing, samesex, same sex tango, Gay Tango, Lesbian, Gay, Bisexual, Transgender" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="/favicon.png">
+    <link rel="shortcut icon" href="/favicon.png">
+    {{#if attrs.description}}
+      <meta name="description" content="{{attrs.description}}" />
+      <meta property="og:description" content="{{attrs.description}}" />
+    {{/if}}
+    {{#if attrs.image}}
+      <meta property="og:image" content="{{image-url attrs.image}}" />
+    {{/if}}
+    <meta property="og:site_name" content="{{attrs.siteName}}" />
+    <meta property="og:title" content="{{attrs.title}}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="{{attrs.url}}" />
+
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{attrs.url}}">
+    <meta property="twitter:title" content="{{attrs.title}}">
+    <meta property="twitter:description" content="{{attrs.description}}">
+    {{#if attrs.image}}
+      <meta property="twitter:image" content="{{image-url attrs.image}}">
+    {{/if}}
+
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h5>
+          <a href="/" id="logo"><img src="https://builds.queertangocollective.org/admin/assets/images/black-logo-62ff338d6c4c313c8a096da504da0228.png"
+              alt="{{attrs.siteName}}" title="{{attrs.siteName}}"></a>{{~_~}}
+          <a href="/" id="text-logo">{{attrs.siteName}}</a>
+        </h5>
+        <nav>
+          <ul>
+            {{#each attrs.sections as |section|}}
+              <li>
+                {{#if (equals section.slug "home")}}
+                  <a href="/" {{#if (equals section.slug ../attrs.section.slug)}} class="active" {{/if}}>
+                    {{~section.name~}}
+                  </a>
+                {{else}}
+                  <a href="/{{section.slug}}" {{#if (equals section.slug ../attrs.section.slug)}} class="active" {{/if}}>
+                    {{~section.name~}}
+                  </a>
+                {{/if}}
+              </li>
+            {{/each}}
+          </ul>
+        </nav>
+      </header>
+      <article>
+        {{{yield}}}
+      </article>
+    </main>
+    <footer>
+      <a href="mailto:{{attrs.siteEmail}}">{{attrs.siteName}}</a>
+    </footer>
+    <script src="/scripts/gallery.js"></script>
+    <script src="/scripts/header.js"></script>
+  </body>
+</html>
