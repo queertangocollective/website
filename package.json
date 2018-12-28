@@ -1,10 +1,11 @@
 {
-  "name": "@queertangocollective/web",
+  "name": "@queertangocollective/website",
   "version": "1.0.0",
   "description": "Server-side rendered websites for communties using Queer Tango Collective administration tools",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "start": "ts-node index.ts",
+    "prepublishOnly": "tsc -p . --outDir dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Tim Evans <tim.c.evans@me.com>",

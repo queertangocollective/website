@@ -3,16 +3,21 @@ import * as knex from 'knex';
 import website from './src/app';
 import * as Sentry from '@sentry/node';
 
-config();
+export { default as Renderer } from './src/renderer';
+export { default as QTCSource } from './src/qtc-source';
 
-let app = website(knex({
-  client: 'pg',
-  connection: process.env['PGCONNECTION']
-}));
+if (process.env['PGCONNECTION']) {
+  config();
 
-Sentry.init({ dsn: process.env['SENTRY_DSN'] });
+  let app = website(knex({
+    client: 'pg',
+    connection: process.env['PGCONNECTION']
+  }));
 
-let port = process.env['PORT'];
-app.listen(port, () => {
-  console.log(`ℹ️ Listening on port ${port}`);
-});
+  Sentry.init({ dsn: process.env['SENTRY_DSN'] });
+
+  let port = process.env['PORT'];
+  app.listen(port, () => {
+    console.log(`ℹ️ Listening on port ${port}`);
+  });
+}
