@@ -1,17 +1,15 @@
 import * as express from 'express';
 import QTCSource from './qtc-source';
 import Renderer from './renderer';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import { html } from 'js-beautify';
 import { compile } from 'handlebars';
 import { HIR } from '@atjson/hir';
+import * as path from 'path';
 import * as knex from 'knex';
 import { Page } from './annotations';
 
 export default function (db: knex) {
   let app = express();
-  app.use(express.static('public'));
 
   app.use(function (req, res, next) {
     if ((!req.secure) && (req.headers['x-forwarded-proto'] === 'http')) {
@@ -87,10 +85,22 @@ export default function (db: knex) {
       res.redirect(`${req.protocol}://${req.get('host')}`);
       return;
     }
-    let [group] = await db.select().from('groups').where({ hostname: req.get('host') });
+    let [group] = await db.select(['groups.*', db.raw('to_json(websites.*) as website')])
+                              .from('groups')
+                              .where({ hostname: req.get('host') })
+                              .leftJoin('websites', {
+                                'websites.id': 'groups.current_website_id'
+                              });
+
     if (group == null) {
       return;
     }
+    if (group.website.assets[`public${req.path}`]) {
+      res.type(path.extname(req.path));
+      res.send(group.website.assets[`public${req.path}`]);
+      return;
+    }
+
     let sections = await db.select().from('channels').where({ group_id: group.id });
     let slug = req.path.slice(1).replace(/\.json$/, '').replace(/\.html$/, '').replace(/\.hir$/, '') || 'home';
   
@@ -141,7 +151,7 @@ export default function (db: knex) {
             res.type('json');
             res.send(new HIR(doc).toJSON());
           } else {
-            let renderer = new Renderer();
+            let renderer = new Renderer(group.website.assets);
             res.send(html(renderer.render(doc), {
               unformatted: ['code', 'pre', 'em', 'strong', 'span', 'title'],
               indent_inner_html: true,
@@ -156,7 +166,7 @@ export default function (db: knex) {
       });
     } catch (error) {
       console.log(`🚫 [${group.hostname}] Error loading ${slug}`, error);
-      let template = compile(readFileSync(join(__dirname, 'views/404.hbs')).toString());
+      let template = compile(group.website.assets["views/404.hbs"]);
       res.status(404).send(html(template({
         attrs: {
           locale: group.locale,

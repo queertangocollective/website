@@ -77,8 +77,16 @@ export function formatDateRange(start: Date, end: Date, timeZone: string) {
 }
 
 export default class HandlebarsRenderer extends Renderer {
+  private assets: { [key: string]: string };
+
+  constructor(assets?: any) {
+    super();
+    this.assets = assets || {};
+  }
+
   templateFor(type: string) {
-    return readFileSync(join(__dirname, 'views/', `${type}.hbs`)).toString()
+    return this.assets[`views/${type}.hbs`] || 
+      readFileSync(join(__dirname, 'views/', `${type}.hbs`)).toString();
   }
 
   *renderAnnotation(annotation: Annotation) {

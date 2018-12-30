@@ -6,9 +6,9 @@ import * as Sentry from '@sentry/node';
 export { default as Renderer } from './src/renderer';
 export { default as QTCSource } from './src/qtc-source';
 
-if (process.env['PGCONNECTION']) {
-  config();
+config();
 
+if (process.env['PGCONNECTION']) {
   let app = website(knex({
     client: 'pg',
     connection: process.env['PGCONNECTION']
