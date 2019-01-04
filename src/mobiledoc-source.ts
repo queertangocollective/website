@@ -57,6 +57,14 @@ export class TicketCard extends ObjectAnnotation {
   };
 }
 
+export class RiverCard extends ObjectAnnotation {
+  static vendorPrefix = 'mobiledoc';
+  static type = 'river-card';
+  attributes!: {
+    channelId: string;
+  };
+}
+
 export class Small extends BlockAnnotation {
   static vendorPrefix = 'mobiledoc';
   static type = 'small';
@@ -72,6 +80,7 @@ export default class QTCMobiledocSource extends MobiledocSource {
     PhotoCard,
     TicketCard,
     LineBreak,
+    RiverCard,
     Small
   ];
 }

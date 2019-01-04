@@ -13,6 +13,7 @@ import OffsetSource, {
   YouTubeEmbed
 } from '@atjson/offset-annotations';
 import {
+  BuyButton,
   Byline,
   Gallery,
   Location,
@@ -21,10 +22,11 @@ import {
   Person,
   PostEmbed,
   Photo,
+  River,
   Schedule,
   Footnote
 } from './annotations';
-import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard, Small } from './mobiledoc-source';
+import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard, Small, TicketCard } from './mobiledoc-source';
 import { formatDateRange } from './renderer';
 import * as knex from 'knex';
 
@@ -46,6 +48,7 @@ export default class QTCSource extends Document {
   static schema = [
     Blockquote,
     Byline,
+    BuyButton,
     Bold,
     Heading,
     Italic,
@@ -63,6 +66,7 @@ export default class QTCSource extends Document {
     Gallery,
     Location,
     LocationName,
+    River,
     Schedule,
     Footnote
   ];
@@ -86,6 +90,40 @@ export default class QTCSource extends Document {
     }
 
     doc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
+
+    let ticketIds: string[] = [];
+    let ticketCards = doc.where({ type: '-mobiledoc-ticket-card' });
+    [...ticketCards].forEach((ticket: TicketCard) => {
+      ticketIds.push(ticket.attributes.ticketId);
+    });
+
+    if (ticketIds.length) {
+      let allTickets = await db.select(['tickets.*', db.raw('to_json(ticketed_events.*) as events')])
+                               .from('tickets')
+                               .whereIn('id', ticketIds)
+                               .where({ group_id: group.id })
+                               .leftJoin('ticketed_events', {
+                                 'ticketed_events.id': 'tickets.id'
+                               });
+      
+      ticketCards.update((ticketCard: TicketCard) => {
+        let ticket = allTickets.find((ticket: any) => {
+          return ticketCard.attributes.ticketId.indexOf(ticket.id) !== -1;
+        });
+
+        doc.replaceAnnotation(ticketCard, new BuyButton({
+          start: ticketCard.start,
+          end: ticketCard.start + 1,
+          attributes: {
+            callToAction: ticketCard.attributes.callToAction,
+            description: ticket.description,
+            cost: ticket.cost,
+            currency: ticket.currency,
+            events: ticket.events
+          }
+        }));
+      });
+    }
 
     let eventIds: string[] = [];
     let itineraryCards = doc.where({ type: '-mobiledoc-itinerary-card' });

@@ -95,6 +95,7 @@ export default function (db: knex) {
     if (group == null) {
       return;
     }
+
     if (group.website.assets[`public${req.path}`]) {
       res.type(path.extname(req.path));
       res.send(group.website.assets[`public${req.path}`]);

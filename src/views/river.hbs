@@ -1,0 +1,9 @@
+{{#each attrs.post as |post|}}
+  <a href="{{post.url}}" class="container clear-fix post-embed">
+    <img {{#if post.photo.altText}}alt="{{post.photo.altText}}" {{/if}}src="{{post.photo.url}}" width={{post.photo.width}} height={{post.photo.height}}>
+    <div>
+      <h2>{{post.title}}</h2>
+      <p>{{post.description}}</p>
+    </div>
+  </a>
+{{/each}}
