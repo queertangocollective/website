@@ -1,9 +1,13 @@
-<div class="container clear-fix river">
+<div class="wide-container clear-fix river">
   {{#each attrs.posts as |post|}}
     <div class="post{{#if post.pinned}} featured{{/if}}">
-      <a href="{{post.url}}">
-        <img {{#if post.photo.altText}}alt="{{post.photo.altText}}" {{/if}}src="{{post.photo.url}}" width={{post.photo.width}} height={{post.photo.height}}>
-      </a>
+      {{#if post.photo}}
+        <a href="{{post.url}}">
+          <img {{#if post.photo.altText}}alt="{{post.photo.altText}}" {{/if}}src="{{post.photo.url}}" width={{post.photo.width}} height={{post.photo.height}}>
+        </a>
+      {{else}}
+        <div></div>
+      {{/if}}
       <div>
         <h2><a href="{{post.url}}">{{post.title}}</a></h2>
         <p>{{post.description}}</p>
