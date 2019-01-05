@@ -99,13 +99,21 @@ export default class QTCSource extends Document {
     });
 
     if (channelIds.length) {
+      let slugs = channelIds.map(channelId => {
+        let channel = group.channels.find((channel: any) => channel.id == channelId);
+        return channel.slug;
+      });
+
       let allPosts = await db.select()
                           .from('posts')
                           .whereIn('channel_id', channelIds)
                           .whereNot('id', json.id)
+                          .whereNotIn('slug', slugs)
                           .where({ group_id: group.id })
-                          .orderBy('created_at', 'desc')
-                          .orderBy('pinned', 'desc');
+                          .orderBy([
+                            { column: 'created_at', order: 'desc' },
+                            { column: 'pinned' }
+                          ]);
 
       riverCards.update((riverCard: RiverCard) => {
         let posts = allPosts.filter((post: any) => {

@@ -91,6 +91,7 @@ export default function (db: knex) {
                               .leftJoin('websites', {
                                 'websites.id': 'groups.current_website_id'
                               });
+    group.channels = await db.select().from('channels').where({ group_id: group.id });
 
     if (group == null) {
       return;
@@ -102,7 +103,6 @@ export default function (db: knex) {
       return;
     }
 
-    let sections = await db.select().from('channels').where({ group_id: group.id });
     let slug = req.path.slice(1).replace(/\.json$/, '').replace(/\.html$/, '').replace(/\.hir$/, '') || 'home';
   
     try {
@@ -114,7 +114,7 @@ export default function (db: knex) {
       let doc = await QTCSource.fromRaw(db, group, post);
       let paragraph = [...doc.where({ type: '-offset-paragraph' }).sort()][0];
       let photo = [...doc.where({ type: '-qtc-photo' }).sort()][0];
-      let section = sections.find((section: any) => section.id == post.channel_id);
+      let section = group.channels.find((section: any) => section.id == post.channel_id);
 
       doc.addAnnotations(new Page({
         start: 0,
@@ -131,7 +131,7 @@ export default function (db: knex) {
           } : null,
           siteName: group.name,
           siteEmail: group.email,
-          sections: sections.map((section: any) => {
+          sections: group.channels.map((section: any) => {
             return {
               slug: section.slug,
               name: section.name
@@ -173,7 +173,7 @@ export default function (db: knex) {
           locale: group.locale,
           siteName: group.name,
           siteEmail: group.email,
-          sections: sections.map((section: any) => {
+          sections: group.channels.map((section: any) => {
             return {
               slug: section.slug,
               name: section.name
