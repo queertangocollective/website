@@ -122,6 +122,7 @@ export default class QTCSource extends Document {
 
         riverCard.attributes.posts = posts.map((post: any) => {
           let postDoc = MobiledocSource.fromRaw(JSON.parse(post.body));
+          postDoc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
           let paragraph = [...postDoc.where({ type: '-mobiledoc-p' }).sort()][0];
           let photo = [...postDoc.where({ type: '-mobiledoc-photo-card' }).sort()][0];
           let schedules = [...postDoc.where({ type: '-mobiledoc-itinerary-card' })];
