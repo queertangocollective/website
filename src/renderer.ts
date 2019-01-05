@@ -28,6 +28,59 @@ registerHelper('is-last-item', function(list, index) {
   return list.length - 1 === index;
 });
 
+registerHelper('format-repeating-event', function(json: Array<{ startsAt: string, endsAt: string, timeZone: string }>) {
+  let events = json.map((event) => {
+    let time = new Intl.DateTimeFormat('en-US', {
+      timeZone: event.timeZone,
+      hour: 'numeric',
+      minute: 'numeric'
+    });
+    let day = new Intl.DateTimeFormat('en-US', {
+      timeZone: event.timeZone,
+      weekday: 'long'
+    });
+
+    let startsAt = new Date(Date.parse(event.startsAt));
+    let endsAt = new Date(Date.parse(event.endsAt));
+    return {
+      startsAt,
+      endsAt,
+      timeZone: event.timeZone,
+      dayOfWeek: day.format(startsAt),
+      time: time.format(startsAt) + ' - ' + time.format(endsAt)
+    };
+  });
+
+  let recurrences: { [key: string]: any } = {};
+  events.forEach(event => {
+    let time = `${event.dayOfWeek} from ${event.time}`;
+    if (recurrences[time] == null) {
+      recurrences[time] = [];
+    }
+    recurrences[time].push(event);
+  });
+
+  return Object.keys(recurrences).map(recurrence => {
+    let events = recurrences[recurrence];
+    let firstEvent = events[0];
+    let lastEvent = events[events.length - 1];
+
+    let monthAndDay = new Intl.DateTimeFormat('en-US', {
+      timeZone: firstEvent.timeZone,
+      month: 'long',
+      day: 'numeric'
+    });
+    let day = new Intl.DateTimeFormat('en-US', {
+      timeZone: firstEvent.timeZone,
+      day: 'numeric'
+    });
+    if (isSameMonth(firstEvent.startsAt, lastEvent.startsAt, firstEvent.timeZone)) {
+      return `${monthAndDay.format(firstEvent.startsAt)} - ${day.format(lastEvent.startsAt)}, every ${recurrence}`;
+    }
+
+    return `${monthAndDay.format(firstEvent.startsAt)} - ${monthAndDay.format(lastEvent.startsAt)}, every ${recurrence}`;
+  });
+});
 
 function isSameDay(a: Date, b: Date, timeZone: string) {
   let date = new Intl.DateTimeFormat('en-US', {
