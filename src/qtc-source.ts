@@ -1,4 +1,4 @@
-import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour } from '@atjson/document';
+import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour, UnknownAnnotation, AnnotationJSON } from '@atjson/document';
 import OffsetSource, {
   Blockquote,
   Bold,
@@ -26,7 +26,7 @@ import {
   Schedule,
   Footnote
 } from './annotations';
-import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard, Small, TicketCard } from './mobiledoc-source';
+import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard, Small, TicketCard, RiverCard } from './mobiledoc-source';
 import { formatDateRange } from './renderer';
 import * as knex from 'knex';
 
@@ -90,6 +90,55 @@ export default class QTCSource extends Document {
     }
 
     doc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
+
+    let photoIds: string[] = [];
+    let channelIds: string[] = [];
+    let riverCards = doc.where({ type: '-mobiledoc-river-card' });
+    [...riverCards].forEach((river: RiverCard) => {
+      channelIds.push(river.attributes.channelId);
+    });
+
+    if (channelIds.length) {
+      let allPosts = await db.select()
+                          .from('posts')
+                          .whereIn('channel_id', channelIds)
+                          .whereNot('id', json.id)
+                          .where({ group_id: group.id })
+                          .orderBy('created_at', 'desc')
+                          .orderBy('pinned', 'desc');
+
+      riverCards.update((riverCard: RiverCard) => {
+        let posts = allPosts.filter((post: any) => {
+          return riverCard.attributes.channelId == post.channel_id;
+        });
+
+        doc.replaceAnnotation(riverCard, new River({
+          start: riverCard.start,
+          end: riverCard.end,
+          attributes: {
+            posts: posts.map((post: any) => {
+              let postDoc = MobiledocSource.fromRaw(JSON.parse(post.body));
+              let paragraph = [...postDoc.where({ type: '-mobiledoc-p' }).sort()][0];
+              let photo = [...postDoc.where({ type: '-mobiledoc-photo-card' }).sort()][0];
+              let photoId = null;
+
+              if (photo) {
+                photoId = photo.attributes.photoId;
+                photoIds.push(photoId);
+              }
+
+              return {
+                pinned: post.pinned,
+                url: `/${post.slug}`,
+                title: post.title,
+                description: paragraph ? postDoc.content.slice(paragraph.start, paragraph.end).trim() : null,
+                photo: photoId
+              }
+            })
+          }
+        }));
+      })
+    }
 
     let ticketIds: string[] = [];
     let ticketCards = doc.where({ type: '-mobiledoc-ticket-card' });
@@ -385,7 +434,6 @@ export default class QTCSource extends Document {
       }
     }
 
-    let photoIds: string[] = [];
     let photoCards = doc.where({ type: '-mobiledoc-photo-card' });
     let galleryCards = doc.where({ type: '-mobiledoc-gallery-card' });
 
@@ -399,6 +447,24 @@ export default class QTCSource extends Document {
 
     if (photoIds.length) {
       let allPhotos = await db.select().from('photos').where({ group_id: group.id }).whereIn('id', compact(photoIds));
+
+      doc.where({ type: '-qtc-river' }).update((river: UnknownAnnotation) => {
+        let json = river.toJSON()! as AnnotationJSON;
+        let attributes = json.attributes as any;
+        attributes['-qtc-posts'].forEach((post: any) => {
+          let photoId = post['-qtc-photo'];
+          if (photoId) {
+            let photo = allPhotos.find((photo: any) => photo.id == photoId);
+            post['-qtc-photo'] = {
+              '-qtc-url': photo.url,
+              '-qtc-altText': photo.title || '',
+              '-qtc-width': photo.width,
+              '-qtc-height': photo.height
+            };
+          }
+        });
+      });
+
       photoCards.update((photoCard: PhotoCard) => {
         let photo = allPhotos.find((photo: any) => photo.id === photoCard.attributes.photoId);
         if (photo) {
@@ -419,20 +485,6 @@ export default class QTCSource extends Document {
           doc.removeAnnotation(photoCard);
         }
       });
-
-      allPhotos.forEach((photo: any) => {
-        debugger;
-        doc.where({ type: '-qtc-post-embed', attributes: { '-qtc-photoId': photo.id } }).set({
-          attributes: {
-            '-qtc-photo': {
-              '-qtc-url': photo.url,
-              '-qtc-altText': photo.title || '',
-              '-qtc-width': photo.width,
-              '-qtc-height': photo.height
-            }
-          }
-        });
-      })
 
       galleryCards.update((galleryCard: GalleryCard) => {
         let photos = allPhotos.filter((photo: any) => {
