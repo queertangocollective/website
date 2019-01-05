@@ -478,13 +478,15 @@ export default class QTCSource extends Document {
 
       riverCards.forEach((riverCard: RiverCard) => {
         riverCard.attributes.posts.forEach((post: any) => {
-          let photo = allPhotos.find((photo: any) => photo.id == post.photoId);
-          post.photo = {
-            url: photo.url,
-            width: photo.width,
-            height: photo.height,
-            altText: photo.title
-          };
+          if (post.photoId) {
+            let photo = allPhotos.find((photo: any) => photo.id == post.photoId);
+            post.photo = {
+              url: photo.url,
+              width: photo.width,
+              height: photo.height,
+              altText: photo.title
+            };
+          }
         });
       });
 

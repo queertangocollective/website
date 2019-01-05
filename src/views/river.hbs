@@ -1,6 +1,6 @@
 <div class="wide-container clear-fix river">
   {{#each attrs.posts as |post|}}
-    <a href="{{post.url}}" class="post{{#if post.pinned}} featured{{/if}}">
+    <a href="{{post.url}}" class="post{{#if post.pinned}} featured{{/if}}{{#if post.photo}} has-photo{{/if}}">
       {{#if post.photo}}
         <figure>
           <img {{#if post.photo.altText}}alt="{{post.photo.altText}}" {{/if}}src="{{post.photo.url}}" width={{post.photo.width}} height={{post.photo.height}}>
