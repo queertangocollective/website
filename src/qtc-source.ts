@@ -1,4 +1,4 @@
-import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour, UnknownAnnotation, AnnotationJSON } from '@atjson/document';
+import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour } from '@atjson/document';
 import OffsetSource, {
   Blockquote,
   Bold,
@@ -93,8 +93,8 @@ export default class QTCSource extends Document {
 
     let photoIds: string[] = [];
     let channelIds: string[] = [];
-    let riverCards = doc.where({ type: '-mobiledoc-river-card' });
-    [...riverCards].forEach((river: RiverCard) => {
+    let riverCards = [...doc.where({ type: '-mobiledoc-river-card' })];
+    riverCards.forEach((river: RiverCard) => {
       channelIds.push(river.attributes.channelId);
     });
 
@@ -115,37 +115,30 @@ export default class QTCSource extends Document {
                             { column: 'created_at', order: 'desc' }
                           ]);
 
-      riverCards.update((riverCard: RiverCard) => {
+      riverCards.forEach((riverCard: RiverCard) => {
         let posts = allPosts.filter((post: any) => {
           return riverCard.attributes.channelId == post.channel_id;
         });
 
-        doc.replaceAnnotation(riverCard, new River({
-          start: riverCard.start,
-          end: riverCard.end,
-          attributes: {
-            posts: posts.map((post: any) => {
-              let postDoc = MobiledocSource.fromRaw(JSON.parse(post.body));
-              let paragraph = [...postDoc.where({ type: '-mobiledoc-p' }).sort()][0];
-              let photo = [...postDoc.where({ type: '-mobiledoc-photo-card' }).sort()][0];
-              let photoId = null;
+        riverCard.attributes.posts = posts.map((post: any) => {
+          let postDoc = MobiledocSource.fromRaw(JSON.parse(post.body));
+          let paragraph = [...postDoc.where({ type: '-mobiledoc-p' }).sort()][0];
+          let photo = [...postDoc.where({ type: '-mobiledoc-photo-card' }).sort()][0];
+          let schedules = [...postDoc.where({ type: '-mobiledoc-itinerary-card' })];
 
-              if (photo) {
-                photoId = photo.attributes.photoId;
-                photoIds.push(photoId);
-              }
-
-              return {
-                pinned: post.pinned,
-                url: `/${post.slug}`,
-                title: post.title,
-                description: paragraph ? postDoc.content.slice(paragraph.start, paragraph.end).trim() : null,
-                photo: photoId
-              }
-            })
+          return {
+            pinned: post.pinned,
+            url: `/${post.slug}`,
+            title: post.title,
+            description: paragraph ? postDoc.content.slice(paragraph.start, paragraph.end).trim() : null,
+            photoId: photo ? photo.attributes.photoId : null,
+            eventIds: schedules.reduce((E: string[], schedule: Schedule) => {
+              E.push(...schedule.attributes.eventIds.map((id: string) => parseInt(id, 10)));
+              return E;
+            }, [])
           }
-        }));
-      })
+        });
+      });
     }
 
     let ticketIds: string[] = [];
@@ -188,6 +181,12 @@ export default class QTCSource extends Document {
       eventIds.push(...itinerary.attributes.eventIds);
     });
 
+    riverCards.forEach((riverCard: RiverCard) => {
+      riverCard.attributes.posts.forEach((post: any) => {
+        eventIds.push(...post.eventIds);
+      });
+    });
+
     if (eventIds.length) {
       let allEvents = await db.select(['events.*', db.raw('to_json(venues.*) as venue')])
                               .from('events')
@@ -201,6 +200,19 @@ export default class QTCSource extends Document {
                                 { column: 'events.ends_at' }
                               ]);
       let allGuests = await db.select().from('guests').whereIn('event_id', eventIds);
+
+      riverCards.forEach((riverCard: RiverCard) => {
+        riverCard.attributes.posts.forEach((post: any) => {
+          post.events = post.eventIds.map((eventId: string) => {
+            let event = allEvents.find((event: any) => event.id == eventId);
+            return {
+              startsAt: event.starts_at.toISOString(),
+              endsAt: event.ends_at.toISOString(),
+              timeZone: group.timezone
+            }
+          });
+        });
+      });
 
       allEvents.forEach((event: any) => {
         event.guests = allGuests.filter((guest: any) => {
@@ -453,23 +465,26 @@ export default class QTCSource extends Document {
       photoIds.push(...gallery.attributes.photoIds);
     });
 
+    riverCards.forEach((riverCard: RiverCard) => {
+      riverCard.attributes.posts.forEach((post: any) => {
+        if (post.photoId) {
+          photoIds.push(post.photoId);
+        }
+      });
+    });
+
     if (photoIds.length) {
       let allPhotos = await db.select().from('photos').where({ group_id: group.id }).whereIn('id', compact(photoIds));
 
-      doc.where({ type: '-qtc-river' }).update((river: UnknownAnnotation) => {
-        let json = river.toJSON()! as AnnotationJSON;
-        let attributes = json.attributes as any;
-        attributes['-qtc-posts'].forEach((post: any) => {
-          let photoId = post['-qtc-photo'];
-          if (photoId) {
-            let photo = allPhotos.find((photo: any) => photo.id == photoId);
-            post['-qtc-photo'] = {
-              '-qtc-url': photo.url,
-              '-qtc-altText': photo.title || '',
-              '-qtc-width': photo.width,
-              '-qtc-height': photo.height
-            };
-          }
+      riverCards.forEach((riverCard: RiverCard) => {
+        riverCard.attributes.posts.forEach((post: any) => {
+          let photo = allPhotos.find((photo: any) => photo.id == post.photoId);
+          post.photo = {
+            url: photo.url,
+            width: photo.width,
+            height: photo.height,
+            altText: photo.title
+          };
         });
       });
 
@@ -543,6 +558,20 @@ export default class QTCSource extends Document {
         a.end += start;
         doc.addAnnotations(a);
       });
+    });
+
+    doc.where({ type: '-mobiledoc-river-card' }).update((riverCard: RiverCard) => {
+      doc.replaceAnnotation(riverCard, new River({
+        start: riverCard.start,
+        end: riverCard.end,
+        attributes: {
+          posts: riverCard.attributes.posts.map((post: any) => {
+            delete post.photoId;
+            delete post.eventIds;
+            return post;
+          })
+        }
+      }))
     });
 
     return new this(doc.convertTo(OffsetSource).toJSON());
