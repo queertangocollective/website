@@ -30,11 +30,6 @@ registerHelper('is-last-item', function(list, index) {
 
 registerHelper('format-repeating-event', function(json: Array<{ startsAt: string, endsAt: string, timeZone: string }>) {
   let events = json.map((event) => {
-    let time = new Intl.DateTimeFormat('en-US', {
-      timeZone: event.timeZone,
-      hour: 'numeric',
-      minute: 'numeric'
-    });
     let day = new Intl.DateTimeFormat('en-US', {
       timeZone: event.timeZone,
       weekday: 'long'
@@ -42,18 +37,26 @@ registerHelper('format-repeating-event', function(json: Array<{ startsAt: string
 
     let startsAt = new Date(Date.parse(event.startsAt));
     let endsAt = new Date(Date.parse(event.endsAt));
+
     return {
       startsAt,
       endsAt,
       timeZone: event.timeZone,
       dayOfWeek: day.format(startsAt),
-      time: time.format(startsAt) + ' - ' + time.format(endsAt)
+      time: formatTime(startsAt, event.timeZone) + ' - ' + formatTime(endsAt, event.timeZone)
     };
+  }).sort((a, b) => {
+    if (a.startsAt < b.startsAt) {
+      return -1;
+    } else if (a.startsAt > b.startsAt) {
+      return 1;
+    }
+    return 0;
   });
 
   let recurrences: { [key: string]: any } = {};
   events.forEach(event => {
-    let time = `${event.dayOfWeek} from ${event.time}`;
+    let time = event.dayOfWeek;
     if (recurrences[time] == null) {
       recurrences[time] = [];
     }
@@ -65,9 +68,16 @@ registerHelper('format-repeating-event', function(json: Array<{ startsAt: string
     let firstEvent = events[0];
     let lastEvent = events[events.length - 1];
 
+    if (events.length === 1) {
+      return formatDateRange(firstEvent.startsAt, firstEvent.endsAt, firstEvent.timeZone);
+    }
+    if (isSameDay(firstEvent.startsAt, lastEvent.startsAt, firstEvent.timeZone)) {
+      return formatDateRange(firstEvent.startsAt, lastEvent.endsAt, firstEvent.timeZone);
+    }
+
     let monthAndDay = new Intl.DateTimeFormat('en-US', {
       timeZone: firstEvent.timeZone,
-      month: 'long',
+      month: 'short',
       day: 'numeric'
     });
     let day = new Intl.DateTimeFormat('en-US', {
@@ -75,12 +85,77 @@ registerHelper('format-repeating-event', function(json: Array<{ startsAt: string
       day: 'numeric'
     });
     if (isSameMonth(firstEvent.startsAt, lastEvent.startsAt, firstEvent.timeZone)) {
-      return `${monthAndDay.format(firstEvent.startsAt)} - ${day.format(lastEvent.startsAt)}, every ${recurrence}`;
+      return `${firstEvent.dayOfWeek}s from ${firstEvent.time}, ${monthAndDay.format(firstEvent.startsAt)} - ${day.format(lastEvent.startsAt)}`;
     }
-
-    return `${monthAndDay.format(firstEvent.startsAt)} - ${monthAndDay.format(lastEvent.startsAt)}, every ${recurrence}`;
+    return `${firstEvent.dayOfWeek}s from ${firstEvent.time}, ${monthAndDay.format(firstEvent.startsAt)} - ${monthAndDay.format(lastEvent.startsAt)}`;
   });
 });
+
+function formatTime(date: Date, timeZone: string) {
+  if (date.getMinutes() > 0) {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: 'numeric',
+      minute: 'numeric'
+    }).format(date);
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: 'numeric'
+  }).format(date);
+}
+
+function formatDay(date: Date, timeZone: string) {
+  if (date.getMinutes() > 0) {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      day: 'numeric'
+    }).format(date);
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    day: 'numeric',
+    hour: 'numeric'
+  }).format(date);
+}
+
+function formatFull(date: Date, timeZone: string) {
+  if (date.getFullYear() === new Date().getFullYear()) {
+    if (date.getMinutes() > 0) {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+      }).format(date);
+    }
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric'
+    }).format(date);
+  } else {
+    if (date.getMinutes() > 0) {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric'
+      }).format(date);
+    }
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric'
+    }).format(date);
+  }
+}
 
 function isSameDay(a: Date, b: Date, timeZone: string) {
   let date = new Intl.DateTimeFormat('en-US', {
@@ -102,31 +177,12 @@ function isSameMonth(a: Date, b: Date, timeZone: string) {
 }
 
 export function formatDateRange(start: Date, end: Date, timeZone: string) {
-  let long = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric'
-  });
-  let time = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: 'numeric',
-    minute: 'numeric'
-  });
-  let day = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric'
-  });
   if (isSameDay(start, end, timeZone)) {
-    return long.format(start) + ' - ' + time.format(end);
+    return formatFull(start, timeZone) + ' - ' + formatTime(end, timeZone);
   } else if (isSameMonth(start, end, timeZone)) {
-    return long.format(start) + ' - ' + day.format(end);
+    return formatFull(start, timeZone) + ' - ' + formatDay(end, timeZone);
   }
-  return long.format(start) + ' - ' + long.format(end);
+  return formatFull(start, timeZone) + ' - ' + formatFull(end, timeZone);
 }
 
 export default class HandlebarsRenderer extends Renderer {
