@@ -111,8 +111,8 @@ export default class QTCSource extends Document {
                           .whereNotIn('slug', slugs)
                           .where({ group_id: group.id })
                           .orderBy([
-                            { column: 'created_at', order: 'desc' },
-                            { column: 'pinned' }
+                            { column: 'pinned', order: 'desc' },
+                            { column: 'created_at', order: 'desc' }
                           ]);
 
       riverCards.update((riverCard: RiverCard) => {
