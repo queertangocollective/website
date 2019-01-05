@@ -1,6 +1,6 @@
 {
   "name": "@queertangocollective/website",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Server-side rendered websites for communties using Queer Tango Collective administration tools",
   "main": "dist/index.js",
   "scripts": {
