@@ -106,6 +106,7 @@ export default class QTCSource extends Document {
 
       let allPosts = await db.select()
                           .from('posts')
+                          .where({ published: true })
                           .whereIn('channel_id', channelIds)
                           .whereNot('id', json.id)
                           .whereNotIn('slug', slugs)
