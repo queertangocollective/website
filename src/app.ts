@@ -141,9 +141,6 @@ export default function (db: knex) {
       }));
 
       res.format({
-        'text/plain'() {
-          res.send(doc.content);
-        },
         'text/html'() {
           if (isJSON) {
             res.type('json');
