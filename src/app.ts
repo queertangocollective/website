@@ -7,9 +7,13 @@ import { HIR } from '@atjson/hir';
 import * as path from 'path';
 import * as knex from 'knex';
 import { Page } from './annotations';
+import Group from './models/group';
+import PublishedPost from './models/published-post';
 
 export default function (db: knex) {
   let app = express();
+  Group.db = db;
+  PublishedPost.db = db;
 
   app.use(function (req, res, next) {
     if ((!req.secure) && (req.headers['x-forwarded-proto'] === 'http')) {
@@ -30,7 +34,7 @@ export default function (db: knex) {
   });
 
   app.get('/robots.txt', function (req, res) {
-    db.select().from('groups').where({ hostname: req.get('host') }).then(([group]: any[]) => {
+    Group.query({ hostname: req.get('host') }).then(group => {
       if (group == null) return;
 
       console.log(`ℹ️ [${group.hostname}] Requested robots.txt`);
@@ -43,7 +47,7 @@ export default function (db: knex) {
   });
 
   app.get('/sitemap.xml', function (req, res) {
-    db.select().from('groups').where({ hostname: req.get('host') }).then(([group]: any[]) => {
+    Group.query({ hostname: req.get('host') }).then(group => {
       if (group == null) return;
 
       console.log(`ℹ️ [${group.hostname}] Requested sitemap.xml`);
@@ -67,13 +71,13 @@ export default function (db: knex) {
   });
 
   app.get('/.well-known/apple-developer-merchantid-domain-association', function (req, res) {
-    db.select().from('groups').where({ hostname: req.get('host') }).then(([group]: any[]) => {
+    Group.query({ hostname: req.get('host') }).then(group => {
       if (group == null) return;
-  
+
       console.log(`ℹ️ [${group.hostname}] Sending Apple Pay info`);
   
       res.set('Content-Type', 'text/plain');
-      res.send(group.apple_developer_merchantid_domain_association);
+      res.send(group.applePayConfiguration);
     }, function (error) {
       res.send(error);
       console.error(error);
@@ -85,14 +89,7 @@ export default function (db: knex) {
       res.redirect(`${req.protocol}://${req.get('host')}`);
       return;
     }
-    let [group] = await db.select(['groups.*', db.raw('to_json(websites.*) as website')])
-                              .from('groups')
-                              .where({ hostname: req.get('host') })
-                              .leftJoin('websites', {
-                                'websites.id': 'groups.current_website_id'
-                              });
-    group.channels = await db.select().from('channels').where({ group_id: group.id });
-
+    let group = await Group.query({ hostname: req.get('host') });
     if (group == null) {
       return;
     }
@@ -110,11 +107,11 @@ export default function (db: knex) {
       let isHIR = req.path.match(/\.hir$/);
       console.log(`ℹ️ [${group.hostname}] Loading post /${slug}`);
 
-      let [post] = await db.select().from('posts').where({ slug, group_id: group.id, published: true });
-      let doc = await QTCSource.fromRaw(db, group, post);
+      let post = await PublishedPost.query({ slug, group }, true);
+
+      let doc = await QTCSource.fromRaw(post);
       let paragraph = [...doc.where({ type: '-offset-paragraph' }).sort()][0];
       let photo = [...doc.where({ type: '-qtc-photo' }).sort()][0];
-      let section = group.channels.find((section: any) => section.id == post.channel_id);
 
       doc.addAnnotations(new Page({
         start: 0,
@@ -125,18 +122,10 @@ export default function (db: knex) {
           description: paragraph ? doc.content.slice(paragraph.start, paragraph.end).trim() : null,
           url: `${req.protocol}://${group.hostname}/${slug}`,
           image: photo ? photo.attributes.url : null,
-          section: section ? {
-            slug: section.slug,
-            name: section.name
-          } : null,
+          section: post.section,
           siteName: group.name,
           siteEmail: group.email,
-          sections: group.channels.map((section: any) => {
-            return {
-              slug: section.slug,
-              name: section.name
-            }
-          })
+          sections: group.sections
         }
       }));
 
@@ -149,7 +138,7 @@ export default function (db: knex) {
             res.type('json');
             res.send(new HIR(doc).toJSON());
           } else {
-            let renderer = new Renderer(group.website.assets);
+            let renderer = new Renderer(group!.website.assets);
             res.send(html(renderer.render(doc), {
               unformatted: ['code', 'pre', 'em', 'strong', 'span', 'title'],
               indent_inner_html: true,
@@ -170,12 +159,7 @@ export default function (db: knex) {
           locale: group.locale,
           siteName: group.name,
           siteEmail: group.email,
-          sections: group.channels.map((section: any) => {
-            return {
-              slug: section.slug,
-              name: section.name
-            }
-          })
+          sections: group.sections
         }
       })));
     }

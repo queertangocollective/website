@@ -5,7 +5,7 @@ export default class River extends ObjectAnnotation {
   static type = 'river';
   attributes!: {
     posts: Array<{
-      pinned: boolean;
+      featured: boolean;
       url: string;
       title: string;
       description: string;

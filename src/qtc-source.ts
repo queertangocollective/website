@@ -1,4 +1,5 @@
 import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour } from '@atjson/document';
+import PersonModel from './models/person';
 import OffsetSource, {
   Blockquote,
   Bold,
@@ -28,21 +29,7 @@ import {
 } from './annotations';
 import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard, Small, TicketCard, RiverCard } from './mobiledoc-source';
 import { formatDateRange } from './renderer';
-import * as knex from 'knex';
-
-function without<T>(array: T[], value: T): T[] {
-  let result: T[] = [];
-  return array.reduce((presentParts, part) => {
-    if (part !== value) {
-      presentParts.push(part);
-    }
-    return presentParts;
-  }, result);
-}
-
-function compact<T>(array: T[]): NonNullable<T[]> {
-  return without(without(array, null), undefined) as NonNullable<T[]>;
-}
+import PublishedPost from './models/published-post';
 
 export default class QTCSource extends Document {
   static schema = [
@@ -71,478 +58,306 @@ export default class QTCSource extends Document {
     Footnote
   ];
 
-  static async fromRaw(db: knex, group: any, json: any) {
-    let doc = MobiledocSource.fromRaw(JSON.parse(json.body));
-    if (json.slug !== 'home') {
-      doc.insertText(0, json.title + '\n');
+  static async fromRaw(post: PublishedPost) {
+    let doc = MobiledocSource.fromRaw(JSON.parse(post.body));
+    if (post.slug !== 'home') {
+      doc.insertText(0, post.title + '\n');
       doc.addAnnotations(new ParseAnnotation({
-        start: json.title.length,
-        end: json.title.length + 1
+        start: post.title.length,
+        end: post.title.length + 1
       }));
       doc.addAnnotations(new Heading({
         start: 0,
-        end: json.title.length + 1,
+        end: post.title.length + 1,
         attributes: {
-          level: 1,
-          channelId: json.channel_id
+          level: 1
         }
       }));
     }
 
     doc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
 
-    let photoIds: string[] = [];
-    let channelIds: string[] = [];
-    let riverCards = [...doc.where({ type: '-mobiledoc-river-card' })];
-    riverCards.forEach((river: RiverCard) => {
-      channelIds.push(river.attributes.channelId);
-    });
-
-    if (channelIds.length) {
-      let slugs = channelIds.map(channelId => {
-        let channel = group.channels.find((channel: any) => channel.id == channelId);
-        return channel.slug;
+    doc.where({ type: '-mobiledoc-river-card' }).update((card: RiverCard) => {
+      let posts = post.posts.filter(post => {
+        return parseInt(card.attributes.channelId, 10) == (post.section && post.section.id);
       });
 
-      let allPosts = await db.select()
-                          .from('posts')
-                          .where({ published: true })
-                          .whereIn('channel_id', channelIds)
-                          .whereNot('id', json.id)
-                          .whereNotIn('slug', slugs)
-                          .where({ group_id: group.id })
-                          .orderBy([
-                            { column: 'pinned', order: 'desc' },
-                            { column: 'created_at', order: 'desc' }
-                          ]);
-
-      riverCards.forEach((riverCard: RiverCard) => {
-        let posts = allPosts.filter((post: any) => {
-          return riverCard.attributes.channelId == post.channel_id;
-        });
-
-        riverCard.attributes.posts = posts.map((post: any) => {
-          let postDoc = MobiledocSource.fromRaw(JSON.parse(post.body));
-          postDoc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
-          let paragraph = [...postDoc.where({ type: '-mobiledoc-p' }).sort()][0];
-          let photo = [...postDoc.where({ type: '-mobiledoc-photo-card' }).sort()][0];
-          let schedules = [...postDoc.where({ type: '-mobiledoc-itinerary-card' })];
-
-          return {
-            pinned: post.pinned,
-            url: `/${post.slug}`,
-            title: post.title,
-            description: paragraph ? postDoc.content.slice(paragraph.start, paragraph.end).trim() : null,
-            photoId: photo ? photo.attributes.photoId : null,
-            eventIds: schedules.reduce((E: string[], schedule: Schedule) => {
+      doc.replaceAnnotation(card, new River({
+        id: card.id,
+        start: card.start,
+        end: card.end,
+        attributes: {
+          posts: posts.map(post => {
+            let postDoc = MobiledocSource.fromRaw(JSON.parse(post.body));
+            postDoc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
+            let paragraph = [...postDoc.where({ type: '-mobiledoc-p' }).sort()][0];
+            let photoCard = [...postDoc.where({ type: '-mobiledoc-photo-card' }).sort()][0];
+            let schedules = [...postDoc.where({ type: '-mobiledoc-itinerary-card' })];
+            let photo = post.photos.find(photo => photo.id == (photoCard && photoCard.attributes.photoId));
+            let events = schedules.reduce((E: string[], schedule: Schedule) => {
               E.push(...schedule.attributes.eventIds.map((id: string) => parseInt(id, 10)));
               return E;
-            }, [])
-          }
-        });
-      });
-    }
-
-    let ticketIds: string[] = [];
-    let ticketCards = doc.where({ type: '-mobiledoc-ticket-card' });
-    [...ticketCards].forEach((ticket: TicketCard) => {
-      ticketIds.push(ticket.attributes.ticketId);
-    });
-
-    if (ticketIds.length) {
-      let allTickets = await db.select(['tickets.*', db.raw('to_json(ticketed_events.*) as events')])
-                               .from('tickets')
-                               .whereIn('id', ticketIds)
-                               .where({ group_id: group.id })
-                               .leftJoin('ticketed_events', {
-                                 'ticketed_events.id': 'tickets.id'
-                               });
-      
-      ticketCards.update((ticketCard: TicketCard) => {
-        let ticket = allTickets.find((ticket: any) => {
-          return ticketCard.attributes.ticketId.indexOf(ticket.id) !== -1;
-        });
-
-        doc.replaceAnnotation(ticketCard, new BuyButton({
-          start: ticketCard.start,
-          end: ticketCard.start + 1,
-          attributes: {
-            callToAction: ticketCard.attributes.callToAction,
-            description: ticket.description,
-            cost: ticket.cost,
-            currency: ticket.currency,
-            events: ticket.events
-          }
-        }));
-      });
-    }
-
-    let eventIds: string[] = [];
-    let itineraryCards = doc.where({ type: '-mobiledoc-itinerary-card' });
-    [...itineraryCards].forEach((itinerary: ItineraryCard) => {
-      eventIds.push(...itinerary.attributes.eventIds);
-    });
-
-    riverCards.forEach((riverCard: RiverCard) => {
-      riverCard.attributes.posts.forEach((post: any) => {
-        eventIds.push(...post.eventIds);
-      });
-    });
-
-    if (eventIds.length) {
-      let allEvents = await db.select(['events.*', db.raw('to_json(venues.*) as venue')])
-                              .from('events')
-                              .where({ group_id: group.id })
-                              .whereIn('events.id', eventIds)
-                              .leftJoin('venues', {
-                                'venues.id': 'events.venue_id'
-                              })
-                              .orderBy([
-                                { column: 'events.starts_at', order: 'desc' },
-                                { column: 'events.ends_at' }
-                              ]);
-      let allGuests = await db.select().from('guests').whereIn('event_id', eventIds);
-
-      riverCards.forEach((riverCard: RiverCard) => {
-        riverCard.attributes.posts.forEach((post: any) => {
-          post.events = post.eventIds.map((eventId: string) => {
-            let event = allEvents.find((event: any) => event.id == eventId);
+            }, []);
+    
             return {
-              startsAt: event.starts_at.toISOString(),
-              endsAt: event.ends_at.toISOString(),
-              timeZone: group.timezone
+              featured: post.featured,
+              url: `/${post.slug}`,
+              title: post.title,
+              description: paragraph ? postDoc.content.slice(paragraph.start, paragraph.end).trim() : null,
+              photo,
+              events
             }
-          });
-        });
-      });
-
-      allEvents.forEach((event: any) => {
-        event.guests = allGuests.filter((guest: any) => {
-          return guest.event_id == event.id;
-        });
-      });
-
-      itineraryCards.update((itineraryCard: ItineraryCard) => {
-        let events = allEvents.filter((event: any) => {
-          return itineraryCard.attributes.eventIds.indexOf(event.id) !== -1;
-        });
-
-        doc.insertText(itineraryCard.end, '\n');
-        doc.replaceAnnotation(itineraryCard, new Schedule({
-          start: itineraryCard.start,
-          end: itineraryCard.start + 1,
-          attributes: {}
-        }));
-
-        events.forEach((event: any) => {
-          let start = itineraryCard.start + 1;
-          let listItemStart = start;
-          let end = start + event.title.length + 1;
-          let annotations: Annotation[] = []
-          doc.insertText(start, event.title + '\n');
-          doc.addAnnotations(new Heading({
-            start ,
-            end: end - 1,
-            attributes: {
-              level: 4
-            }
-          }));
-          start = end;
-
-          let range = formatDateRange(event.starts_at, event.ends_at, group.timezone);
-          end = start + range.length + 1;
-          doc.insertText(start, range + '\n');
-          annotations.push(new LineBreak({
-            start: end - 1,
-            end
-          }));
-          start = end;
-
-          let groups = event.guests.reduce((E: any, guest: any) => {
-            if (E[guest.role] == null) {
-              E[guest.role] = [];
-            }
-            E[guest.role].push(guest);
-            return E;
-          }, {});
-          Object.keys(groups).forEach((byline: string) => {
-            let guests = groups[byline];
-            doc.insertText(start, '\uFFFC\n');
-            end = start + 2;
-            annotations.push(new Byline({
-              start,
-              end: start + 1,
-              attributes: {
-                byline,
-                people: guests.map((guest: any) => guest.person_id)
-              }
-            }));
-            start = end;
-
-            guests.forEach((guest: any) => {
-              let peopleCards = doc.where({ type: '-mobiledoc-person-card' }).sort();
-              if (peopleCards.where({ attributes: { '-mobiledoc-personId': guest.person_id.toString() }}).length === 0) {
-                let insertAt = doc.content.length;
-                let behaviour = AdjacentBoundaryBehaviour.preserve;
-                if (peopleCards.length > 0) {
-                  insertAt = [...peopleCards][peopleCards.length - 1].end;
-                  behaviour = AdjacentBoundaryBehaviour.default;
-                }
-                doc.insertText(insertAt, '\uFFFC\n', behaviour);
-                doc.addAnnotations(new PersonCard({
-                  start: insertAt,
-                  end: insertAt + 1,
-                  attributes: {
-                    personId: guest.person_id
-                  }
-                }));
-              }
-            });
-          });
-
-          if (event.venue && doc.where(a => a.type === 'location-card' && a.attributes.locationId == event.venue.location_id).length === 0) {
-            let insertAt = doc.content.length;
-            doc.insertText(insertAt, '\uFFFC\n', AdjacentBoundaryBehaviour.preserve);
-            doc.addAnnotations(new LocationCard({
-              start: insertAt,
-              end: insertAt + 1,
-              attributes: {
-                locationId: event.venue.location_id
-              }
-            }));
-          }
-
-          if (event.venue) {
-            doc.insertText(start, '\uFFFC');
-            end = start + 1;
-            annotations.push(new LocationName({
-              start,
-              end: start + 1,
-              attributes: {
-                id: event.venue.location_id.toString(),
-                extendedAddress: event.venue.extended_address
-              }
-            }));
-          }
-
-          if (event.description) {
-            start = end;
-            let description = MobiledocSource.fromRaw(JSON.parse(event.description));
-            doc.insertText(start, description.content);
-            description.annotations.forEach(a => {
-              a.start += start;
-              a.end += start;
-              doc.addAnnotations(a);
-            });
-            end = start + description.content.length;
-          }
-
-          doc.addAnnotations(...annotations, new ListItem({
-            start: listItemStart,
-            end
-          }));
-        });
-      });
-    }
-
-    let personIds: string[] = [];
-    let personCards = doc.where({ type: '-mobiledoc-person-card' });
-    [...personCards].forEach((person: PersonCard) => {
-      personIds.push(person.attributes.personId);
+          })
+        }
+      }));
     });
 
-    if (personIds.length) {
-      let allPeople = await db.select().from('people').where({ group_id: group.id }).whereIn('id', personIds);
-      for (let card of personCards) {
-        let person = allPeople.find((person: any) => {
-          return card.attributes.personId === person.id;
-        });
+    doc.where({ type: '-mobiledoc-ticket-card' }).update((ticketCard: TicketCard) => {
+      let ticket = post.tickets.find((ticket: any) => {
+        return ticketCard.attributes.ticketId.indexOf(ticket.id) !== -1;
+      })!;
 
-        doc.insertText(card.end, '\n');
-        doc.where({ id: card.id }).set({ end: card.start + 1 });
+      doc.replaceAnnotation(ticketCard, new BuyButton({
+        start: ticketCard.start,
+        end: ticketCard.start + 1,
+        attributes: {
+          callToAction: ticketCard.attributes.callToAction,
+          description: ticket.description,
+          cost: ticket.cost,
+          currency: ticket.currency
+        }
+      }));
+    });
 
-        let start = card.start + 1;
-        if (person.name !== json.title) {
-          doc.insertText(card.start + 1, person.name + '\n');
-          doc.addAnnotations(new Heading({
-            start: card.start + 1,
-            end: card.start + 1 + person.name.length,
+    doc.where({ type: '-mobiledoc-itinerary-card' }).update((itineraryCard: ItineraryCard) => {
+      let events = post.events.filter((event: any) => {
+        return itineraryCard.attributes.eventIds.indexOf(event.id) !== -1;
+      });
+
+      doc.insertText(itineraryCard.end, '\n');
+      doc.replaceAnnotation(itineraryCard, new Schedule({
+        start: itineraryCard.start,
+        end: itineraryCard.start + 1,
+        attributes: {}
+      }));
+
+      events.forEach(event => {
+        let start = itineraryCard.start + 1;
+        let listItemStart = start;
+        let end = start + event.title.length + 1;
+        let annotations: Annotation[] = []
+        doc.insertText(start, event.title + '\n');
+        doc.addAnnotations(new Heading({
+          start ,
+          end: end - 1,
+          attributes: {
+            level: 4
+          }
+        }));
+        start = end;
+
+        let range = formatDateRange(event.startsAt, event.endsAt, post.group.timezone);
+        end = start + range.length + 1;
+        doc.insertText(start, range + '\n');
+        annotations.push(new LineBreak({
+          start: end - 1,
+          end
+        }));
+        start = end;
+
+        let groups: { [key: string]: Array<{ role: string, person: PersonModel }> } = event.bylines.reduce((E: any, guest: any) => {
+          if (E[guest.role] == null) {
+            E[guest.role] = [];
+          }
+          E[guest.role].push(guest);
+          return E;
+        }, {});
+
+        Object.keys(groups).forEach((byline: string) => {
+          let bylines = groups[byline];
+          doc.insertText(start, '\uFFFC\n');
+          end = start + 2;
+          annotations.push(new Byline({
+            start,
+            end: start + 1,
             attributes: {
-              level: 3,
-              sticky: true
+              byline,
+              people: bylines.map(byline => byline.person)
             }
           }));
-          start += person.name.length + 1;
+          start = end;
+
+          bylines.forEach(byline => {
+            let peopleCards = doc.where({ type: '-mobiledoc-person-card' }).sort();
+            if (peopleCards.where({ attributes: { '-mobiledoc-personId': byline.person.id.toString() }}).length === 0) {
+              let insertAt = doc.content.length;
+              let behaviour = AdjacentBoundaryBehaviour.preserve;
+              if (peopleCards.length > 0) {
+                insertAt = [...peopleCards][peopleCards.length - 1].end;
+                behaviour = AdjacentBoundaryBehaviour.default;
+              }
+              doc.insertText(insertAt, '\uFFFC\n', behaviour);
+              doc.addAnnotations(new PersonCard({
+                start: insertAt,
+                end: insertAt + 1,
+                attributes: {
+                  personId: byline.person.id.toString()
+                }
+              }));
+            }
+          });
+        });
+
+        if (event.venue && doc.where(a => a.type === 'location-card' && a.attributes.locationId == event.venue.location.id).length === 0) {
+          let insertAt = doc.content.length;
+          doc.insertText(insertAt, '\uFFFC\n', AdjacentBoundaryBehaviour.preserve);
+          doc.addAnnotations(new LocationCard({
+            start: insertAt,
+            end: insertAt + 1,
+            attributes: {
+              locationId: event.venue.location.id.toString()
+            }
+          }));
         }
 
-        if (person.biography) {
-          let bio = MobiledocSource.fromRaw(JSON.parse(person.biography));
+        if (event.venue) {
+          doc.insertText(start, '\uFFFC');
+          end = start + 1;
+          annotations.push(new LocationName({
+            start,
+            end: start + 1,
+            attributes: {
+              id: event.venue.location.id.toString(),
+              name: event.venue.location.name,
+              extendedAddress: event.venue.extendedAddress || event.venue.location.extendedAddress
+            }
+          }));
+        }
 
-          doc.insertText(start, bio.content);
-          bio.annotations.forEach(a => {
+        if (event.description) {
+          start = end;
+          let description = MobiledocSource.fromRaw(JSON.parse(event.description));
+          doc.insertText(start, description.content);
+          description.annotations.forEach(a => {
             a.start += start;
             a.end += start;
             doc.addAnnotations(a);
           });
+          end = start + description.content.length;
         }
-        doc.deleteText(card.start, card.start + 1);
-        doc.where({ id: card.id }).set({ type: '-qtc-person' }).rename({ attributes: { '-mobiledoc-personId': '-qtc-id' } });
-      }
-      doc.where({ type: '-qtc-byline' }).update((byline: any) => {
-        let attrs = byline.attributes.attributes;
-        let people = attrs['-qtc-people'].map((id: string) => {
-          let person = allPeople.find((person: any) => id == person.id);
-          return {
-            id: person.id,
-            name: person.name
-          };
-        });
-        doc.replaceAnnotation(byline, new Byline({
-          start: byline.start,
-          end: byline.end,
-          attributes: {
-            byline: attrs['-qtc-byline'],
-            people
-          }
+
+        doc.addAnnotations(...annotations, new ListItem({
+          start: listItemStart,
+          end
         }));
       });
-
-    }
-
-    let locationIds: string[] = [];
-    let locationCards = doc.where({ type: '-mobiledoc-location-card' });
-    [...locationCards].forEach((location: LocationCard) => {
-      locationIds.push(location.attributes.locationId);
     });
 
-    if (locationIds.length) {
-      let allLocations = await db.select().from('locations').where({ group_id: group.id }).whereIn('id', compact(locationIds));
-      for (let card of locationCards) {
-        let location = allLocations.find((loc: any) => {
-          return card.attributes.locationId == loc.id;
-        });
-        if (location) {
-          doc.replaceAnnotation(card, new Location({
-            start: card.start,
-            end: card.end,
-            attributes: {
-              id: location.id,
-              name: location.name,
-              website: location.website,
-              addressLine: location.address_line,
-              extendedAddress: card.attributes.extendedAddress || location.extended_address,
-              city: location.city,
-              regionCode: location.region_code,
-              postalCode: location.postal_code,
-              latitude: location.latitude,
-              longitude: location.longitude
-            }
-          }));
+    doc.where({ type: '-mobiledoc-person-card' }).update((card: PersonCard) => {
+      let person = post.people.find((person: any) => {
+        return card.attributes.personId == person.id;
+      })!;
 
-          doc.where({ type: '-qtc-location-name', attributes: { '-qtc-id': location.id } }).update(name => {
-            doc.replaceAnnotation(name, new LocationName({
-              start: name.start,
-              end: name.end,
-              attributes: {
-                id: location.id,
-                name: location.name,
-                extendedAddress: name.attributes.attributes['-qtc-extendedAddress'] || location.extendedAddress
-              }
-            }))
-          });
-        } else {
-          doc.removeAnnotation(card);
-        }
+      doc.insertText(card.end, '\n');
+      doc.where({ id: card.id }).set({ end: card.start + 1 });
+
+      let start = card.start + 1;
+      if (person.name !== post.title) {
+        doc.insertText(card.start + 1, person.name + '\n');
+        doc.addAnnotations(new Heading({
+          start: card.start + 1,
+          end: card.start + 1 + person.name.length,
+          attributes: {
+            level: 3,
+            sticky: true
+          }
+        }));
+        start += person.name.length + 1;
       }
-    }
 
-    let photoCards = doc.where({ type: '-mobiledoc-photo-card' });
-    let galleryCards = doc.where({ type: '-mobiledoc-gallery-card' });
+      if (person.biography) {
+        let bio = MobiledocSource.fromRaw(JSON.parse(person.biography));
 
-    [...photoCards].forEach((photo: PhotoCard) => {
-      photoIds.push(photo.attributes.photoId);
+        doc.insertText(start, bio.content);
+        bio.annotations.forEach(a => {
+          a.start += start;
+          a.end += start;
+          doc.addAnnotations(a);
+        });
+      }
+      doc.deleteText(card.start, card.start + 1);
+      doc.where({ id: card.id }).set({ type: '-qtc-person' }).rename({ attributes: { '-mobiledoc-personId': '-qtc-id' } });
     });
 
-    [...galleryCards].forEach((gallery: GalleryCard) => {
-      photoIds.push(...gallery.attributes.photoIds);
-    });
-
-    riverCards.forEach((riverCard: RiverCard) => {
-      riverCard.attributes.posts.forEach((post: any) => {
-        if (post.photoId) {
-          photoIds.push(post.photoId);
-        }
+    doc.where({ type: '-mobiledoc-location-card' }).update((card: LocationCard) => {
+      let location = post.locations.find(loc => {
+        return parseInt(card.attributes.locationId, 10) == loc.id;
       });
+
+      if (location) {
+        doc.replaceAnnotation(card, new Location({
+          start: card.start,
+          end: card.end,
+          attributes: {
+            id: location.id,
+            name: location.name,
+            website: location.website,
+            addressLine: location.addressLine,
+            extendedAddress: card.attributes.extendedAddress || location.extendedAddress,
+            city: location.city,
+            regionCode: location.regionCode,
+            postalCode: location.postalCode,
+            latitude: location.latitude,
+            longitude: location.longitude
+          }
+        }));
+      } else {
+        doc.removeAnnotation(card);
+      }
     });
 
-    if (photoIds.length) {
-      let allPhotos = await db.select().from('photos').where({ group_id: group.id }).whereIn('id', compact(photoIds));
+    doc.where({ type: '-mobiledoc-photo-card' }).update((card: PhotoCard) => {
+      let photo = post.photos.find((photo: any) => photo.id == card.attributes.photoId);
+      if (photo) {
+        doc.replaceAnnotation(card, new Photo({
+          start: card.start,
+          end: card.end,
+          attributes: {
+            url: photo.url,
+            width: photo.width,
+            height: photo.height,
+            altText: photo.altText,
+            caption: card.attributes.caption,
+            align: card.attributes.align,
+            size: card.attributes.size
+          }
+        }));
+      } else {
+        doc.removeAnnotation(card);
+      }
+    });
 
-      riverCards.forEach((riverCard: RiverCard) => {
-        riverCard.attributes.posts.forEach((post: any) => {
-          if (post.photoId) {
-            let photo = allPhotos.find((photo: any) => photo.id == post.photoId);
-            post.photo = {
+    doc.where({ type: '-mobiledoc-gallery-card' }).update((galleryCard: GalleryCard) => {
+      let photos = post.photos.filter((photo: any) => {
+        return galleryCard.attributes.photoIds.indexOf(photo.id.toString()) !== -1;
+      });
+  
+      doc.replaceAnnotation(galleryCard, new Gallery({
+        start: galleryCard.start,
+        end: galleryCard.end,
+        attributes: {
+          photos: photos.map(photo => {
+            return {
               url: photo.url,
               width: photo.width,
               height: photo.height,
-              altText: photo.title
+              altText: photo.altText
             };
-          }
-        });
-      });
-
-      photoCards.update((photoCard: PhotoCard) => {
-        let photo = allPhotos.find((photo: any) => photo.id === photoCard.attributes.photoId);
-        if (photo) {
-          doc.replaceAnnotation(photoCard, new Photo({
-            start: photoCard.start,
-            end: photoCard.end,
-            attributes: {
-              url: photo.url,
-              width: photo.width,
-              height: photo.height,
-              altText: photo.title,
-              caption: photoCard.attributes.caption,
-              align: photoCard.attributes.align,
-              size: photoCard.attributes.size
-            }
-          }));
-        } else {
-          doc.removeAnnotation(photoCard);
+          }),
+          style: galleryCard.attributes.style,
+          size: galleryCard.attributes.size
         }
-      });
-
-      galleryCards.update((galleryCard: GalleryCard) => {
-        let photos = allPhotos.filter((photo: any) => {
-          return galleryCard.attributes.photoIds.indexOf(photo.id) !== -1;
-        });
-        doc.replaceAnnotation(galleryCard, new Gallery({
-          start: galleryCard.start,
-          end: galleryCard.end,
-          attributes: {
-            photos: photos.map((photo: any) => {
-              return {
-                url: photo.url,
-                width: photo.width,
-                height: photo.height,
-                altText: photo.title
-              };
-            }),
-            style: galleryCard.attributes.style,
-            size: galleryCard.attributes.size
-          }
-        }));
-      });
-    }
-
-    doc.where({ type: '-qtc-post-embed' }).as('post').join(
-      doc.where({ type: '-mobiledoc-h3' }).as('headings'),
-      (a, b) => a.isAlignedWith(b)
-    ).update(({ headings }) => {
-      headings.forEach((heading) => {
-        doc.removeAnnotation(heading);
-      });
+      }));
     });
 
     doc.where({ type: '-mobiledoc-small' }).update((small: Small) => {
@@ -562,20 +377,6 @@ export default class QTCSource extends Document {
         a.end += start;
         doc.addAnnotations(a);
       });
-    });
-
-    doc.where({ type: '-mobiledoc-river-card' }).update((riverCard: RiverCard) => {
-      doc.replaceAnnotation(riverCard, new River({
-        start: riverCard.start,
-        end: riverCard.end,
-        attributes: {
-          posts: riverCard.attributes.posts.map((post: any) => {
-            delete post.photoId;
-            delete post.eventIds;
-            return post;
-          })
-        }
-      }))
     });
 
     return new this(doc.convertTo(OffsetSource).toJSON());
