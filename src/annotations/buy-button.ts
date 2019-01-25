@@ -9,7 +9,7 @@ export default class BuyButton extends ObjectAnnotation {
     cost: number;
     currency: string;
     events: Array<{
-      id: string;
+      id: number;
       name: string;
     }>;
   };

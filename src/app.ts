@@ -51,9 +51,9 @@ export default function (db: knex) {
       if (group == null) return;
 
       console.log(`ℹ️ [${group.hostname}] Requested sitemap.xml`);
-      return db.select('title', 'body', 'slug', 'updated_at').from('posts').where({
+      return db.select('title', 'body', 'slug', 'updated_at').from('published_posts').where({
         group_id: group.id,
-        published: true
+        live: true
       }).then((posts: any) => {
         let urls = posts.map((post: any) => {
           // Remove precise time from the url
@@ -97,6 +97,9 @@ export default function (db: knex) {
     if (group.website.assets[`public${req.path}`]) {
       res.type(path.extname(req.path));
       res.send(group.website.assets[`public${req.path}`]);
+      return;
+    // Ignore if no favicon was provided
+    } else if (req.path === 'favicon.ico') {
       return;
     }
 

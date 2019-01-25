@@ -18,17 +18,19 @@ export default class PublishedPost {
       'published_posts'
     ).limit(1).where({
       slug: query.slug,
-      group_id: query.group.id
-    }).orderBy([
-      { column: 'created_at', order: 'desc' }
-    ]);
+      group_id: query.group.id,
+      live: true
+    });
 
     if (includeRelationships) {
       // Grab all rivers first
       let sectionIds = await this.db.select().from('published_channels').where({
         published_post_id: parseInt(post.id, 10)
+      }).then((publishedChannels: any) => {
+        return publishedChannels.map((publishedChannel: any) => parseInt(publishedChannel.channel_id, 10));
       });
-      let sections = query.group.sections.map(section => sectionIds.indexOf(section.id));
+
+      let sections = query.group.sections.filter(section => sectionIds.indexOf(section.id) !== -1);
       if (sectionIds.length) {
         post.posts = await PublishedPost.all({ sections, group: query.group, postId: post.id });
       } else {
@@ -183,20 +185,20 @@ export default class PublishedPost {
   }
 
   static async all(
-    query: { sections: Section[], postId: string, group: Group }
+    query: { sections: Section[], postId: number, group: Group }
   ) {
     let river = await this.db.select().from(
       'published_posts'
     ).whereIn(
       'channel_id', query.sections.map(section => section.id)
-    ).whereNot(
-      'id', query.postId
-    ).whereNotIn(
+    ).whereNot({
+      id: query.postId
+    }).whereNotIn(
       'slug', query.sections.map(section => section.slug)
     ).where({
+      live: true,
       group_id: query.group.id
-    })
-    .orderBy([
+    }).orderBy([
       { column: 'featured', order: 'desc' },
       { column: 'created_at', order: 'desc' }
     ]);

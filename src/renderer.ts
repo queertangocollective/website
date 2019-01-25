@@ -24,6 +24,10 @@ registerHelper('aspect-ratio', function(width, height) {
   return (height / width) * 100;
 });
 
+registerHelper('json', function(object) {
+  return JSON.stringify(object);
+});
+
 registerHelper('is-last-item', function(list, index) {
   return list.length - 1 === index;
 });

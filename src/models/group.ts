@@ -36,7 +36,7 @@ export default class Group {
   };
 
   constructor(json: any) {
-    this.id = json.id;
+    this.id = parseInt(json.id, 10);
     this.hostname = json.hostname;
     this.locale = json.locale;
     this.applePayConfiguration = json.apple_developer_merchantid_domain_association;

@@ -1,5 +1,6 @@
 import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour } from '@atjson/document';
 import PersonModel from './models/person';
+import EventModel from './models/event';
 import OffsetSource, {
   Blockquote,
   Bold,
@@ -87,25 +88,33 @@ export default class QTCSource extends Document {
         start: card.start,
         end: card.end,
         attributes: {
-          posts: posts.map(post => {
-            let postDoc = MobiledocSource.fromRaw(JSON.parse(post.body));
+          posts: posts.map(item => {
+            let postDoc = MobiledocSource.fromRaw(JSON.parse(item.body));
             postDoc.where({ type: '-mobiledoc-p' }).where(a => a.start === a.end).remove();
             let paragraph = [...postDoc.where({ type: '-mobiledoc-p' }).sort()][0];
             let photoCard = [...postDoc.where({ type: '-mobiledoc-photo-card' }).sort()][0];
             let schedules = [...postDoc.where({ type: '-mobiledoc-itinerary-card' })];
             let photo = post.photos.find(photo => photo.id == (photoCard && photoCard.attributes.photoId));
-            let events = schedules.reduce((E: string[], schedule: Schedule) => {
-              E.push(...schedule.attributes.eventIds.map((id: string) => parseInt(id, 10)));
+            let events: EventModel[] = schedules.reduce((E: EventModel[], schedule: Schedule) => {
+              E.push(...schedule.attributes.eventIds.map((id: string) => {
+                return post.events.find(event => event.id == parseInt(id, 10));
+              }));
               return E;
             }, []);
     
             return {
-              featured: post.featured,
-              url: `/${post.slug}`,
-              title: post.title,
+              featured: item.featured,
+              url: `/${item.slug}`,
+              title: item.title,
               description: paragraph ? postDoc.content.slice(paragraph.start, paragraph.end).trim() : null,
               photo,
-              events
+              events: events.map(event => {
+                return {
+                  startsAt: event.startsAt.toISOString(),
+                  endsAt: event.endsAt.toISOString(),
+                  timeZone: item.group.timezone
+                };
+              })
             }
           })
         }
