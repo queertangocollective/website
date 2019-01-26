@@ -142,7 +142,7 @@ export default class PublishedPost {
       );
 
       let locationIds = [...new Set([
-        ...events.map((event: any) => event.venue.location_id),
+        ...events.map((event: any) => event.venue).filter((venue: any) => venue != null).map((venue: any) => venue.location_id),
         ...publishedLocations.map((publishedLocation: any) => publishedLocation.location_id)
       ])];
 

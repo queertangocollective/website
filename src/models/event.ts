@@ -8,7 +8,7 @@ export default class Event {
   level: string;
   startsAt: Date;
   endsAt: Date;
-  venue: {
+  venue?: {
     location: Location;
     extendedAddress: string;
   };
@@ -24,10 +24,12 @@ export default class Event {
     this.level = json.level;
     this.startsAt = json.starts_at;
     this.endsAt = json.ends_at;
-    this.venue = {
-      location: locations.find(location => location.id == json.venue.location_id)!,
-      extendedAddress: json.venue.extended_address
-    };
+    if (json.venue) {
+      this.venue = {
+        location: locations.find(location => location.id == json.venue.location_id)!,
+        extendedAddress: json.venue.extended_address
+      };
+    }
     this.bylines = json.guests.map((guest: any) => {
       return {
         role: guest.role,

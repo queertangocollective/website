@@ -1,6 +1,4 @@
 import Document, { ParseAnnotation, Annotation, AdjacentBoundaryBehaviour } from '@atjson/document';
-import PersonModel from './models/person';
-import EventModel from './models/event';
 import OffsetSource, {
   Blockquote,
   Bold,
@@ -31,6 +29,9 @@ import {
 import MobiledocSource, { PhotoCard, GalleryCard, ItineraryCard, PersonCard, LocationCard, Small, TicketCard, RiverCard } from './mobiledoc-source';
 import { formatDateRange } from './renderer';
 import PublishedPost from './models/published-post';
+import PersonModel from './models/person';
+import EventModel from './models/event';
+import PhotoModel from './models/photo';
 
 export default class QTCSource extends Document {
   static schema = [
@@ -347,9 +348,9 @@ export default class QTCSource extends Document {
     });
 
     doc.where({ type: '-mobiledoc-gallery-card' }).update((galleryCard: GalleryCard) => {
-      let photos = post.photos.filter((photo: any) => {
-        return galleryCard.attributes.photoIds.indexOf(photo.id.toString()) !== -1;
-      });
+      let photos = galleryCard.attributes.photoIds.map(photoId => {
+        return post.photos.find(photo => photo.id == parseInt(photoId, 10));
+      }).filter(model => model != null) as PhotoModel[];
   
       doc.replaceAnnotation(galleryCard, new Gallery({
         start: galleryCard.start,
