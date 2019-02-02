@@ -127,7 +127,7 @@ export default function (db: knex) {
             </head>
           </html>`));
       } else {
-        console.log(`ℹ️ [${group.hostname}] Loading app at ${group.build.git_url}/commit/${group.build.git_sha}`);
+        console.log(`ℹ️ [${group.hostname}] Loading app at ${group.build.git_url}commit/${group.build.git_sha}`);
         let build = group.build;
         res.send(html(build.html.replace('%7B%7Bbuild.id%7D%7D', build.id.toString())));
       }
