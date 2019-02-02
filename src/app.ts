@@ -104,6 +104,38 @@ export default function (db: knex) {
       return;
     }
 
+    // Handle any ember apps being hosted
+    if (group.build) {
+      if (req.path === '/redirect.html') {
+        res.send(html(`
+        <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8">
+              <title>Torii OAuth Redirect</title>
+              <script>
+                var CURRENT_REQUEST_KEY = '__torii_request';
+                var pendingRequestKey = window.localStorage.getItem(CURRENT_REQUEST_KEY);
+                if (pendingRequestKey) {
+                  window.localStorage.removeItem(CURRENT_REQUEST_KEY);
+                  var url = window.location.toString();
+                  window.localStorage.setItem(pendingRequestKey, url);
+                }
+                window.close();
+              </script>
+            </head>
+          </html>`));
+      } else {
+        let build = group.build;
+        res.send(html(build.html.replace('%7B%7Bbuild.id%7D%7D', build.id.toString())));
+      }
+      return;
+    }
+
+    if (group.website == null) {
+      res.status(400).send('');
+      return;
+    }
 
     if (group.website.assets[`public${req.path}`]) {
       res.type(path.extname(req.path));
@@ -166,7 +198,7 @@ export default function (db: knex) {
             res.type('json');
             res.send(new HIR(doc).toJSON());
           } else {
-            let renderer = new Renderer(group!.website.assets);
+            let renderer = new Renderer(group!.website!.assets);
             res.send(html(renderer.render(doc), {
               unformatted: ['code', 'pre', 'em', 'strong', 'span', 'title'],
               indent_inner_html: true,

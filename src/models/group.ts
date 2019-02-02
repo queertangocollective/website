@@ -7,13 +7,16 @@ export default class Group {
   static async query(query: { hostname: string | undefined }) {
     let [group] = await this.db.select([
       'groups.*',
-      this.db.raw('to_json(websites.*) as website')
+      this.db.raw('to_json(websites.*) as website'),
+      this.db.raw('to_json(builds.*) as build')
     ]).from(
       'groups'
     ).where(
       query
     ).leftJoin('websites', {
       'websites.id': 'groups.current_website_id'
+    }).leftJoin('builds', {
+      'builds.id': 'groups.current_build_id'
     });
     
     if (group) {
@@ -31,8 +34,12 @@ export default class Group {
   email?: string;
   sections: Section[];
   timezone: string;
-  website: {
+  website?: {
     assets: { [key: string]: string };
+  };
+  build?: {
+    id: number;
+    html: string;
   };
 
   constructor(json: any) {
@@ -45,5 +52,6 @@ export default class Group {
     this.website = json.website;
     this.sections = json.channels.map((channel: any) => new Section(channel));
     this.timezone = json.timezone;
+    this.build = json.build;
   }
 }
