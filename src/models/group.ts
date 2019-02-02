@@ -39,6 +39,8 @@ export default class Group {
   };
   build?: {
     id: number;
+    git_sha: string;
+    git_url: string;
     html: string;
   };
 
