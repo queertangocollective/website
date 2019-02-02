@@ -218,7 +218,7 @@ export default class QTCSource extends Document {
           });
         });
 
-        if (event.venue && doc.where(a => a.type === 'location-card' && a.attributes.locationId == event.venue.location.id).length === 0) {
+        if (event.venue && doc.where(a => a.type === 'location-card' && a.attributes.locationId == event.venue!.location.id).length === 0) {
           let insertAt = doc.content.length;
           doc.insertText(insertAt, '\uFFFC\n', AdjacentBoundaryBehaviour.preserve);
           doc.addAnnotations(new LocationCard({

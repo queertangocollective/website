@@ -22,6 +22,10 @@ export default class PublishedPost {
       live: true
     });
 
+    if (post == null) {
+      return null;
+    }
+
     if (includeRelationships) {
       // Grab all rivers first
       let sectionIds = await this.db.select().from('published_channels').where({
@@ -77,7 +81,7 @@ export default class PublishedPost {
         ...publishedEvents.map((publishedEvent: any) => publishedEvent.event_id),
         ...ticketedEvents.map((ticketedEvent: any) => ticketedEvent.event_id)
       ])];
-      
+
       let events = [];
       let guests: any[] = [];
       if (eventIds.length) {
@@ -181,7 +185,7 @@ export default class PublishedPost {
     post.group = query.group;
     post.section = query.group.sections.find(section => post.channel_id == section.id);
 
-    return new PublishedPost(post); 
+    return new PublishedPost(post);
   }
 
   static async all(
@@ -208,7 +212,7 @@ export default class PublishedPost {
       item.section = query.group.sections.find(section => item.channel_id == section.id);
     });
 
-    return river.map((post: any) => new PublishedPost(post)) as PublishedPost[]; 
+    return river.map((post: any) => new PublishedPost(post)) as PublishedPost[];
   }
 
   id: number;
