@@ -105,7 +105,7 @@ export default function (db: knex) {
     }
 
     // Handle any ember apps being hosted
-    if (group.build) {
+    if (group.build && group.website == null) {
       if (req.path === '/redirect.html') {
         res.send(html(`
         <!DOCTYPE html>
