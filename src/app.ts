@@ -16,7 +16,7 @@ export default function (db: knex) {
   PublishedPost.db = db;
 
   app.use(function (req, res, next) {
-    if ((!req.secure) && (req.headers['x-forwarded-proto'] === 'http')) {
+    if ((!req.secure) && (req.headers['x-forwarded-proto'] === 'http') && req.path !== '/health') {
       console.log(`🔒 Securing http://${req.get('host')}`);
       res.redirect(`https://${req.get('host')}${req.url}`);
     } else {
