@@ -1,8 +1,8 @@
-import { ObjectAnnotation } from '@atjson/document';
+import { ObjectAnnotation } from "@atjson/document";
 
 export default class LocationName extends ObjectAnnotation {
-  static vendorPrefix = 'qtc';
-  static type = 'location-name';
+  static vendorPrefix = "qtc";
+  static type = "location-name";
   attributes!: {
     name: string;
     city: string;

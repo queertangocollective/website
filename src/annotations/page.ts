@@ -1,8 +1,8 @@
-import { BlockAnnotation } from '@atjson/document';
+import { BlockAnnotation } from "@atjson/document";
 
 export default class Page extends BlockAnnotation {
-  static vendorPrefix = 'qtc';
-  static type = 'page';
+  static vendorPrefix = "qtc";
+  static type = "page";
   attributes!: {
     locale: string;
     group: {
@@ -16,13 +16,13 @@ export default class Page extends BlockAnnotation {
       url: string;
       section?: {
         id: string;
-      }
+      };
     };
     sections: Array<{
       id: string;
       slug: string;
       name: string;
-    }>
+    }>;
   };
 
   get rank() {

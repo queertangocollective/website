@@ -1,8 +1,8 @@
-import { ObjectAnnotation } from '@atjson/document';
+import { ObjectAnnotation } from "@atjson/document";
 
 export default class Gallery extends ObjectAnnotation {
-  static vendorPrefix = 'qtc';
-  static type = 'gallery';
+  static vendorPrefix = "qtc";
+  static type = "gallery";
   attributes!: {
     photos: Array<{
       url: string;
@@ -11,7 +11,7 @@ export default class Gallery extends ObjectAnnotation {
       caption: string;
       altText: string;
     }>;
-    size: 'small' | 'medium' | 'large' | undefined;
-    style: 'mosaic' | undefined;
+    size: "small" | "medium" | "large" | undefined;
+    style: "mosaic" | undefined;
   };
 }

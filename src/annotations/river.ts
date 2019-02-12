@@ -1,8 +1,8 @@
-import { ObjectAnnotation } from '@atjson/document';
+import { ObjectAnnotation } from "@atjson/document";
 
 export default class River extends ObjectAnnotation {
-  static vendorPrefix = 'qtc';
-  static type = 'river';
+  static vendorPrefix = "qtc";
+  static type = "river";
   attributes!: {
     posts: Array<{
       featured: boolean;

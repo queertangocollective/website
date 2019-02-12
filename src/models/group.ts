@@ -1,26 +1,30 @@
-import * as knex from 'knex';
-import Section from './section';
+import * as knex from "knex";
+import Section from "./section";
 
 export default class Group {
   static db: knex;
 
   static async query(query: { hostname: string | undefined }) {
-    let [group] = await this.db.select([
-      'groups.*',
-      this.db.raw('to_json(websites.*) as website'),
-      this.db.raw('to_json(builds.*) as build')
-    ]).from(
-      'groups'
-    ).where(
-      query
-    ).leftJoin('websites', {
-      'websites.id': 'groups.current_website_id'
-    }).leftJoin('builds', {
-      'builds.id': 'groups.current_build_id'
-    });
-    
+    let [group] = await this.db
+      .select([
+        "groups.*",
+        this.db.raw("to_json(websites.*) as website"),
+        this.db.raw("to_json(builds.*) as build")
+      ])
+      .from("groups")
+      .where(query)
+      .leftJoin("websites", {
+        "websites.id": "groups.current_website_id"
+      })
+      .leftJoin("builds", {
+        "builds.id": "groups.current_build_id"
+      });
+
     if (group) {
-      group.channels = await this.db.select().from('channels').where({ group_id: group.id });
+      group.channels = await this.db
+        .select()
+        .from("channels")
+        .where({ group_id: group.id });
       return new Group(group);
     }
     return null;
@@ -48,7 +52,8 @@ export default class Group {
     this.id = parseInt(json.id, 10);
     this.hostname = json.hostname;
     this.locale = json.locale;
-    this.applePayConfiguration = json.apple_developer_merchantid_domain_association;
+    this.applePayConfiguration =
+      json.apple_developer_merchantid_domain_association;
     this.name = json.name;
     this.email = json.email;
     this.website = json.website;

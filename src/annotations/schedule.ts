@@ -1,6 +1,6 @@
-import { BlockAnnotation } from '@atjson/document';
+import { BlockAnnotation } from "@atjson/document";
 
 export default class Schedule extends BlockAnnotation {
-  static vendorPrefix = 'qtc';
-  static type = 'schedule';
+  static vendorPrefix = "qtc";
+  static type = "schedule";
 }

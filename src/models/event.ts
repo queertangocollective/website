@@ -26,7 +26,9 @@ export default class Event {
     this.endsAt = json.ends_at;
     if (json.venue) {
       this.venue = {
-        location: locations.find(location => location.id == json.venue.location_id)!,
+        location: locations.find(
+          location => location.id == json.venue.location_id
+        )!,
         extendedAddress: json.venue.extended_address
       };
     }
@@ -34,7 +36,7 @@ export default class Event {
       return {
         role: guest.role,
         person: people.find(person => person.id == guest.person_id)!
-      }
+      };
     });
   }
 }

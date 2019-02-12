@@ -1,8 +1,8 @@
-import { ObjectAnnotation } from '@atjson/document';
+import { ObjectAnnotation } from "@atjson/document";
 
 export default class BuyButton extends ObjectAnnotation {
-  static vendorPrefix = 'qtc';
-  static type = 'buy-button';
+  static vendorPrefix = "qtc";
+  static type = "buy-button";
   attributes!: {
     callToAction: string;
     code: string;
