@@ -209,7 +209,11 @@ export default class QTCSource extends Document {
                   name: event.title,
                   startsAt: event.startsAt.toISOString(),
                   endsAt: event.endsAt.toISOString(),
-                  location: event.venue
+                  location: event.venue ? {
+                    name: event.venue.location.name,
+                    latitude: event.venue.location.latitude,
+                    longitude: event.venue.location.longitude
+                  } : null
                 }
               })
             }
