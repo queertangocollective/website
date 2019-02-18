@@ -203,7 +203,16 @@ export default class QTCSource extends Document {
           new Schedule({
             start: itineraryCard.start,
             end: itineraryCard.start + 1,
-            attributes: {}
+            attributes: {
+              events: events.map(event => {
+                return {
+                  name: event.title,
+                  startsAt: event.startsAt.toISOString(),
+                  endsAt: event.endsAt.toISOString(),
+                  location: event.venue
+                }
+              })
+            }
           })
         );
 
