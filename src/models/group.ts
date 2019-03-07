@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import * as knex from "knex";
 import Section from "./section";
 
@@ -47,6 +48,8 @@ export default class Group {
     git_url: string;
     html: string;
   };
+  encryptedStripePublishableKey: string;
+  encryptedStripeSecretKey: string;
 
   constructor(json: any) {
     this.id = parseInt(json.id, 10);
@@ -60,5 +63,28 @@ export default class Group {
     this.sections = json.channels.map((channel: any) => new Section(channel));
     this.timezone = json.timezone;
     this.build = json.build;
+
+    this.encryptedStripePublishableKey = json.encrypted_stripe_publishable_key;
+    this.encryptedStripeSecretKey = json.encrypted_stripe_secret_key;
+  }
+
+  get stripePublishableKey() {
+    return this.decrypt(this.encryptedStripePublishableKey);
+  }
+
+  get stripeSecretKey() {
+    return this.decrypt(this.encryptedStripeSecretKey);
+  }
+
+  decrypt(signedData: string) {
+    let privateKey = crypto.pbkdf2Sync(process.env['STRIPE_SECRET']!, process.env['STRIPE_SALT']!, 65536, 32, 'sha1');
+    let value = new Buffer(signedData.split('--')[0], 'base64').toString();
+    let [encryptedData, initializationVector] = value.split('--').map((data: string) => {
+      return new Buffer(data, 'base64');
+    });
+    let cipher = crypto.createDecipheriv('aes-256-cbc', privateKey, initializationVector);
+    let decryptedValue = cipher.update(encryptedData).toString();
+    decryptedValue += cipher.final().toString();
+    return decryptedValue.replace(/^\u0004\u0008I"%(.*)\u0006:\u0006ET$/g, '$1');
   }
 }

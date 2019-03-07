@@ -9,10 +9,13 @@ import * as knex from "knex";
 import { Page } from "./annotations";
 import Group from "./models/group";
 import PublishedPost from "./models/published-post";
+import Ticket from "./models/ticket";
+import * as Stripe from "stripe";
 
 export default function(db: knex) {
   let app = express();
   Group.db = db;
+  Ticket.db = db;
   PublishedPost.db = db;
 
   app.use(function(req, res, next) {
@@ -40,6 +43,30 @@ export default function(db: knex) {
           res.status(500).send("💔");
         }
       );
+  });
+
+  app.get("/pay", async function (req, res) {
+    let group = await Group.query({ hostname: req.get("host") });
+    if (group == null) {
+      res.status(400).send("");
+      return;
+    }
+
+    let stripe = new Stripe(group.stripeSecretKey);
+    let ticket = await Ticket.findBy(req.params.ticketId);
+    if (ticket == null) {
+      res.status(400).send("");
+      return;
+    }
+
+    let charge = await stripe.charges.create({
+      amount: ticket.cost,
+      currency: ticket.currency,
+      description: ticket.description,
+      source: req.params.stripeToken
+    });
+
+    // Create transaction, customer, etc in db
   });
 
   app.get("/robots.txt", function(req, res) {

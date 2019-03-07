@@ -1,6 +1,21 @@
+import * as knex from "knex";
 import Event from "./event";
 
 export default class Ticket {
+  static db: knex;
+
+  static async findBy(id: string) {
+    let [ticket] = await this.db
+      .select()
+      .from("tickets")
+      .where({ id });
+
+    if (ticket) {
+      return new Ticket(ticket, []);
+    }
+    return null;
+  }
+
   id: number;
   description: string;
   quantity: number;

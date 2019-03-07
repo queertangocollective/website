@@ -156,9 +156,15 @@ export default class QTCSource extends Document {
                 photo,
                 events: events.map(event => {
                   return {
+                    name: event.title,
                     startsAt: event.startsAt.toISOString(),
                     endsAt: event.endsAt.toISOString(),
-                    timeZone: item.group.timezone
+                    timeZone: item.group.timezone,
+                    location: event.venue ? {
+                      name: event.venue.location.name,
+                      latitude: event.venue.location.latitude,
+                      longitude: event.venue.location.longitude
+                    } : null
                   };
                 })
               };
@@ -209,6 +215,7 @@ export default class QTCSource extends Document {
                   name: event.title,
                   startsAt: event.startsAt.toISOString(),
                   endsAt: event.endsAt.toISOString(),
+                  timeZone: post.group.timezone,
                   location: event.venue ? {
                     name: event.venue.location.name,
                     latitude: event.venue.location.latitude,

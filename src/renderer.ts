@@ -4,11 +4,11 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { compile, registerHelper } from "handlebars";
 
-registerHelper("equals", function(a, b) {
+registerHelper("equals", function(a: any, b: any) {
   return a === b;
 });
 
-registerHelper("image-url", function(url) {
+registerHelper("image-url", function(url: string) {
   let s3Key = url
     .replace(`https://${process.env["CLOUDFRONT_URL"]}/`, "")
     .replace(`https://${process.env["AWS_BUCKET_NAME"]}.s3.amazonaws.com/`, "")
@@ -17,19 +17,19 @@ registerHelper("image-url", function(url) {
   return `https://${process.env["CLOUDFRONT_URL"]}/${s3Key}`;
 });
 
-registerHelper("not", function(a) {
+registerHelper("not", function(a: any) {
   return !a;
 });
 
-registerHelper("aspect-ratio", function(width, height) {
+registerHelper("aspect-ratio", function(width: number, height: number) {
   return (height / width) * 100;
 });
 
-registerHelper("json", function(object) {
+registerHelper("json", function(object: any) {
   return JSON.stringify(object);
 });
 
-registerHelper("is-last-item", function(list, index) {
+registerHelper("is-last-item", function(list: any[], index: number) {
   return list.length - 1 === index;
 });
 
