@@ -4,14 +4,29 @@ import Event from "./event";
 export default class Ticket {
   static db: knex;
 
-  static async findBy(id: string) {
+  static async query(query: any) {
     let [ticket] = await this.db
       .select()
       .from("tickets")
-      .where({ id });
+      .where(query);
 
     if (ticket) {
-      return new Ticket(ticket, []);
+      ticket.ticketed_events = await this.db
+        .select()
+        .from("ticketed_events")
+        .where({ ticket_id: ticket.id });
+
+      let events = await this.db
+        .select()
+        .from("events")
+        .whereIn("events.id", ticket.ticketed_events.map((ticketedEvent: any) => {
+          return ticketedEvent.event_id;
+        }));
+
+      return new Ticket(
+        ticket,
+        (events || []).map((event: any) => new Event(event, [], []))
+      );
     }
     return null;
   }
@@ -24,6 +39,14 @@ export default class Ticket {
   validFrom: Date;
   validTo: Date;
   events: Event[];
+
+  get total() {
+    return Math.round((this.cost + 30) / (1 - 0.029));
+  }
+
+  get stripeFee() {
+    return this.total - this.cost;
+  }
 
   constructor(json: any, events: Event[]) {
     this.id = json.id;

@@ -8,6 +8,7 @@ import * as path from "path";
 import * as knex from "knex";
 import { Page } from "./annotations";
 import Group from "./models/group";
+import Person from "./models/person";
 import PublishedPost from "./models/published-post";
 import Ticket from "./models/ticket";
 import * as Stripe from "stripe";
@@ -16,6 +17,7 @@ export default function(db: knex) {
   let app = express();
   Group.db = db;
   Ticket.db = db;
+  Person.db = db;
   PublishedPost.db = db;
 
   app.use(function(req, res, next) {
@@ -53,11 +55,32 @@ export default function(db: knex) {
     }
 
     let stripe = new Stripe(group.stripeSecretKey);
-    let ticket = await Ticket.findBy(req.params.ticketId);
+    let ticket = await Ticket.query({ id: req.params.ticketId });
     if (ticket == null) {
       res.status(400).send("");
       return;
     }
+    let person = await Person.query({
+      email: req.params.email.toLowerCase()
+    });
+
+    if (person == null) {
+      person = await Person.create({
+        name: req.params.name,
+        email: req.params.email.toLowerCase()
+      });
+    }
+
+    if (person == null) {
+      res.status(500).send("Oh no");
+      return;
+    }
+
+    let transaction = await db('transactions').insert({
+      group_id: group.id,
+      description: ticket.description,
+      ticket_id: ticket.id
+    });
 
     let charge = await stripe.charges.create({
       amount: ticket.cost,
@@ -66,7 +89,56 @@ export default function(db: knex) {
       source: req.params.stripeToken
     });
 
+    if (charge.failure_code || charge.status === 'failed') {
+      res.type("json");
+      res.status(422);
+      res.send({
+        status: charge.status,
+        failure_code: charge.failure_code,
+        failure_message: charge.failure_message
+      });
+
+      // Delete pending transaction, since the charge failed
+      await db.select().from('transactions').where({ id: transaction.id }).del();
+      return;
+    }
+
+    let balance = await stripe.balance.retrieveTransaction(
+      charge.balance_transaction.toString()
+    );
+    
+    let paymentUrl = group.stripePublishableKey.indexOf('pk_live') === 0 ?
+      `https://dashboard.stripe.com/payments/${charge.id}` :
+      `https://dashboard.stripe.com/test/payments/${charge.id}`;
+
     // Create transaction, customer, etc in db
+    await db.select('transactions')
+            .where({ id: transaction.id })
+            .update({
+              paid_at: new Date(charge.created).toISOString(),
+              amount_paid: balance.net,
+              currency: balance.currency,
+              payment_method: 'stripe',
+              payment_processor_url: paymentUrl
+            });
+
+    for (let i = 0, len = ticket.events.length; i < len; i++) {
+      let event = ticket.events[i];
+      await db('ticket_stubs').insert({
+        group_id: group!.id,
+        person_id: person!.id,
+        event_id: event.id,
+        purchase_id: transaction.id,
+        ticket_id: ticket!.id,
+        attended: false
+      });
+    }
+
+    res.type("json");
+    res.send({
+      status: charge.status,
+      receipt_url: (charge as any).receipt_url
+    });
   });
 
   app.get("/robots.txt", function(req, res) {
