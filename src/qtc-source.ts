@@ -187,10 +187,13 @@ export default class QTCSource extends Document {
             start: ticketCard.start,
             end: ticketCard.start + 1,
             attributes: {
+              code: `${post.group.code}-${ticket.id}`,
               callToAction: ticketCard.attributes.callToAction,
+              locale: post.group.locale,
               description: ticket.description,
               cost: ticket.cost,
-              currency: ticket.currency
+              currency: ticket.currency.toLowerCase(),
+              stripeFee: ticket.stripeFee
             }
           })
         );

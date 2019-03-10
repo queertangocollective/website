@@ -29,6 +29,15 @@ registerHelper("json", function(object: any) {
   return JSON.stringify(object);
 });
 
+registerHelper("add", function(a: number, b: number) {
+  return a + b;
+});
+
+registerHelper("format-money", function(amount: number, currency: string, locale: string) {
+  let formatter = Intl.NumberFormat(locale, { style: 'currency', currency });
+  return formatter.format(amount);
+});
+
 registerHelper("is-last-item", function(list: any[], index: number) {
   return list.length - 1 === index;
 });

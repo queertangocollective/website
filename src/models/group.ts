@@ -51,6 +51,12 @@ export default class Group {
   encryptedStripePublishableKey: string;
   encryptedStripeSecretKey: string;
 
+  get code() {
+    return this.name.split(/\s+/).map(word => {
+      return word[0];
+    }).join('').replace(/-/g, '').toUpperCase();
+  }
+
   constructor(json: any) {
     this.id = parseInt(json.id, 10);
     this.hostname = json.hostname;

@@ -7,7 +7,10 @@ export default class BuyButton extends ObjectAnnotation {
     callToAction: string;
     code: string;
     cost: number;
+    locale: string;
     currency: string;
+    description: string;
+    stripeFee: number;
     events: Array<{
       id: number;
       name: string;

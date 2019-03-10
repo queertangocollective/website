@@ -47,6 +47,14 @@ export default function(db: knex) {
       );
   });
 
+  /**
+   * POST /pay {
+   *   ticketId,
+   *   email,
+   *   name,
+   *   stripeToken
+   * }
+   */
   app.get("/pay", async function (req, res) {
     let group = await Group.query({ hostname: req.get("host") });
     if (group == null) {
@@ -60,27 +68,6 @@ export default function(db: knex) {
       res.status(400).send("");
       return;
     }
-    let person = await Person.query({
-      email: req.params.email.toLowerCase()
-    });
-
-    if (person == null) {
-      person = await Person.create({
-        name: req.params.name,
-        email: req.params.email.toLowerCase()
-      });
-    }
-
-    if (person == null) {
-      res.status(500).send("Oh no");
-      return;
-    }
-
-    let transaction = await db('transactions').insert({
-      group_id: group.id,
-      description: ticket.description,
-      ticket_id: ticket.id
-    });
 
     let charge = await stripe.charges.create({
       amount: ticket.cost,
@@ -97,9 +84,6 @@ export default function(db: knex) {
         failure_code: charge.failure_code,
         failure_message: charge.failure_message
       });
-
-      // Delete pending transaction, since the charge failed
-      await db.select().from('transactions').where({ id: transaction.id }).del();
       return;
     }
 
@@ -111,16 +95,40 @@ export default function(db: knex) {
       `https://dashboard.stripe.com/payments/${charge.id}` :
       `https://dashboard.stripe.com/test/payments/${charge.id}`;
 
+    let person = await Person.query({
+      email: req.params.email.toLowerCase()
+    });
+
+    if (person == null) {
+      person = await Person.create({
+        name: req.params.name,
+        email: req.params.email.toLowerCase()
+      });
+    }
+
+    if (person == null) {
+      // This failed, but we shouldn't show this to users,
+      // since we charged their card. Instead, alert via Sentry.
+      res.status(200).send({
+        status: charge.status,
+        receipt_url: (charge as any).receipt_url
+      });
+      // Send sentry error to log this. :(
+      return;
+    }
+
     // Create transaction, customer, etc in db
-    await db.select('transactions')
-            .where({ id: transaction.id })
-            .update({
-              paid_at: new Date(charge.created).toISOString(),
-              amount_paid: balance.net,
-              currency: balance.currency,
-              payment_method: 'stripe',
-              payment_processor_url: paymentUrl
-            });
+    let transaction = await db('transactions').insert({
+      group_id: group.id,
+      description: ticket.description,
+      ticket_id: ticket.id,
+      paid_at: new Date(charge.created).toISOString(),
+      paid_by_id: person.id,
+      amount_paid: balance.net,
+      currency: balance.currency,
+      payment_method: 'stripe',
+      payment_processor_url: paymentUrl
+    });
 
     for (let i = 0, len = ticket.events.length; i < len; i++) {
       let event = ticket.events[i];
