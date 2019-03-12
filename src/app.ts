@@ -13,6 +13,7 @@ import PublishedPost from "./models/published-post";
 import Ticket from "./models/ticket";
 import * as Stripe from "stripe";
 import * as bodyParser from 'body-parser';
+import * as Sentry from '@sentry/node';
 
 export default function(db: knex) {
   let app = express();
@@ -68,6 +69,7 @@ export default function(db: knex) {
         res.status(400).send("");
         return;
       }
+      console.log(`💸️ [${group.hostname}] /pay being processed`);
 
       let stripe = new Stripe(group.stripeSecretKey);
       let ticket = await Ticket.query({ id: parseInt(req.body.ticketId, 10) });
@@ -80,6 +82,7 @@ export default function(db: knex) {
         amount: ticket.total,
         currency: ticket.currency,
         description: ticket.description,
+        receipt_email: req.body.email,
         source: req.body.stripeToken
       });
 
@@ -91,6 +94,7 @@ export default function(db: knex) {
           failure_code: charge.failure_code,
           failure_message: charge.failure_message
         });
+        Sentry.captureMessage(`Charge failed ${charge.failure_code}`);
         return;
       }
 
@@ -121,7 +125,7 @@ export default function(db: knex) {
           status: charge.status,
           receipt_url: (charge as any).receipt_url
         });
-        // Send sentry error to log this. :(
+        Sentry.captureMessage(`Created charge for ${charge.id}, but could not create person.`)
         return;
       }
 
@@ -160,6 +164,7 @@ export default function(db: knex) {
         receipt_url: (charge as any).receipt_url
       });
     } catch (e) {
+      Sentry.captureException(e);
       res.type("json");
       res.status(500);
       res.send({});
