@@ -167,7 +167,9 @@ export default function(db: knex) {
       Sentry.captureException(e);
       res.type("json");
       res.status(500);
-      res.send({});
+      res.send({
+        failure_message: 'Sorry, something went wrong'
+      });
     }
   });
 
