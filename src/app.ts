@@ -135,7 +135,7 @@ export default function(db: knex) {
         paid_at: new Date(charge.created * 1000).toISOString(),
         paid_by_id: person.id,
         amount_paid: balance.net,
-        currency: balance.currency,
+        currency: balance.currency.toUpperCase(),
         payment_method: 'stripe',
         payment_processor_url: paymentUrl
       }).returning('*');
