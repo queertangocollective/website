@@ -54,9 +54,9 @@ export default class Ticket {
     this.currency = json.currency;
     this.cost = json.cost;
     this.quantity = json.quantity;
-    this.validFrom = json.valid_from;
-    this.validTo = json.valid_to;
-    this.events = json.ticketedEvents.map((ticketedEvent: any) => {
+    this.validFrom = new Date(Date.parse(json.valid_from));
+    this.validTo = new Date(Date.parse(json.valid_to));
+    this.events = json.ticketed_events.map((ticketedEvent: any) => {
       return events.find(event => event.id == ticketedEvent.event_id);
     });
   }

@@ -89,7 +89,7 @@ export default class PublishedPost {
           .whereIn("ticket_id", tickets.map((ticket: any) => ticket.id));
 
         tickets.forEach((ticket: any) => {
-          ticket.ticketedEvents = ticketedEvents.filter(
+          ticket.ticketed_events = ticketedEvents.filter(
             (event: any) => event.ticket_id == ticket.id
           );
         });

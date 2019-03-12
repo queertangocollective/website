@@ -23,6 +23,7 @@
     "@types/js-beautify": "^1.8.0",
     "@types/knex": "^0.15.1",
     "@types/stripe": "^6.25.0",
+    "body-parser": "^1.18.3",
     "dotenv": "^4.0.0",
     "express": "^4.16.2",
     "handlebars": "^4.1.0",

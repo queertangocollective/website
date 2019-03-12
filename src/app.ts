@@ -12,6 +12,7 @@ import Person from "./models/person";
 import PublishedPost from "./models/published-post";
 import Ticket from "./models/ticket";
 import * as Stripe from "stripe";
+import * as bodyParser from 'body-parser';
 
 export default function(db: knex) {
   let app = express();
@@ -55,98 +56,113 @@ export default function(db: knex) {
    *   stripeToken
    * }
    */
-  app.get("/pay", async function (req, res) {
-    let group = await Group.query({ hostname: req.get("host") });
-    if (group == null) {
-      res.status(400).send("");
+  app.post("/pay", bodyParser.json(), async function (req, res) {
+    if (!req.body) {
+      res.sendStatus(400);
       return;
     }
 
-    let stripe = new Stripe(group.stripeSecretKey);
-    let ticket = await Ticket.query({ id: req.params.ticketId });
-    if (ticket == null) {
-      res.status(400).send("");
-      return;
-    }
+    try {
+      let group = await Group.query({ hostname: req.get("host") });
+      if (group == null) {
+        res.status(400).send("");
+        return;
+      }
 
-    let charge = await stripe.charges.create({
-      amount: ticket.cost,
-      currency: ticket.currency,
-      description: ticket.description,
-      source: req.params.stripeToken
-    });
+      let stripe = new Stripe(group.stripeSecretKey);
+      let ticket = await Ticket.query({ id: parseInt(req.body.ticketId, 10) });
+      if (ticket == null) {
+        res.status(400).send("");
+        return;
+      }
 
-    if (charge.failure_code || charge.status === 'failed') {
+      let charge = await stripe.charges.create({
+        amount: ticket.total,
+        currency: ticket.currency,
+        description: ticket.description,
+        source: req.body.stripeToken
+      });
+
+      if (charge.failure_code || charge.status === 'failed') {
+        res.type("json");
+        res.status(422);
+        res.send({
+          status: charge.status,
+          failure_code: charge.failure_code,
+          failure_message: charge.failure_message
+        });
+        return;
+      }
+
+      let balance = await stripe.balance.retrieveTransaction(
+        charge.balance_transaction.toString()
+      );
+      
+      let paymentUrl = group.stripePublishableKey.indexOf('pk_live') === 0 ?
+        `https://dashboard.stripe.com/payments/${charge.id}` :
+        `https://dashboard.stripe.com/test/payments/${charge.id}`;
+
+      let person = await Person.query({
+        email: req.body.email.toLowerCase()
+      });
+
+      if (person == null) {
+        person = await Person.create({
+          name: req.body.name,
+          email: req.body.email.toLowerCase()
+        });
+      }
+
+      if (person == null) {
+        // This failed, but we shouldn't show this to users,
+        // since we charged their card. Instead, alert via Sentry.
+        res.status(200).send({
+          status: charge.status,
+          receipt_url: (charge as any).receipt_url
+        });
+        // Send sentry error to log this. :(
+        return;
+      }
+
+      // Create transaction, customer, etc in db
+      let transaction = await db('transactions').insert({
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        group_id: group.id,
+        description: ticket.description,
+        ticket_id: ticket.id,
+        paid_at: new Date(charge.created * 1000).toISOString(),
+        paid_by_id: person.id,
+        amount_paid: balance.net,
+        currency: balance.currency,
+        payment_method: 'stripe',
+        payment_processor_url: paymentUrl
+      });
+
+      for (let i = 0, len = ticket.events.length; i < len; i++) {
+        let event = ticket.events[i];
+        await db('ticket_stubs').insert({
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          group_id: group!.id,
+          person_id: person!.id,
+          event_id: event.id,
+          purchase_id: transaction.id,
+          ticket_id: ticket!.id,
+          attended: false
+        });
+      }
+
       res.type("json");
-      res.status(422);
       res.send({
-        status: charge.status,
-        failure_code: charge.failure_code,
-        failure_message: charge.failure_message
-      });
-      return;
-    }
-
-    let balance = await stripe.balance.retrieveTransaction(
-      charge.balance_transaction.toString()
-    );
-    
-    let paymentUrl = group.stripePublishableKey.indexOf('pk_live') === 0 ?
-      `https://dashboard.stripe.com/payments/${charge.id}` :
-      `https://dashboard.stripe.com/test/payments/${charge.id}`;
-
-    let person = await Person.query({
-      email: req.params.email.toLowerCase()
-    });
-
-    if (person == null) {
-      person = await Person.create({
-        name: req.params.name,
-        email: req.params.email.toLowerCase()
-      });
-    }
-
-    if (person == null) {
-      // This failed, but we shouldn't show this to users,
-      // since we charged their card. Instead, alert via Sentry.
-      res.status(200).send({
         status: charge.status,
         receipt_url: (charge as any).receipt_url
       });
-      // Send sentry error to log this. :(
-      return;
+    } catch (e) {
+      res.type("json");
+      res.status(500);
+      res.send({});
     }
-
-    // Create transaction, customer, etc in db
-    let transaction = await db('transactions').insert({
-      group_id: group.id,
-      description: ticket.description,
-      ticket_id: ticket.id,
-      paid_at: new Date(charge.created).toISOString(),
-      paid_by_id: person.id,
-      amount_paid: balance.net,
-      currency: balance.currency,
-      payment_method: 'stripe',
-      payment_processor_url: paymentUrl
-    });
-
-    for (let i = 0, len = ticket.events.length; i < len; i++) {
-      let event = ticket.events[i];
-      await db('ticket_stubs').insert({
-        group_id: group!.id,
-        person_id: person!.id,
-        event_id: event.id,
-        purchase_id: transaction.id,
-        ticket_id: ticket!.id,
-        attended: false
-      });
-    }
-
-    res.type("json");
-    res.send({
-      status: charge.status,
-      receipt_url: (charge as any).receipt_url
-    });
   });
 
   app.get("/robots.txt", function(req, res) {
@@ -290,8 +306,10 @@ export default function(db: knex) {
     }
 
     if (group.website.assets[`public${req.path}`]) {
+      let asset = group.website.assets[`public${req.path}`];
+      asset = asset.replace(/Stripe\(['|"]pk_test_[a-zA-Z0-9]+['|"]\)/, `Stripe("${group.stripePublishableKey}")`);
       res.type(path.extname(req.path));
-      res.send(group.website.assets[`public${req.path}`]);
+      res.send(asset);
       return;
       // Ignore if no favicon was provided
     } else if (req.path === "favicon.ico") {
@@ -346,6 +364,7 @@ export default function(db: knex) {
               : null,
             url: `${req.protocol}://${group.hostname}/${slug}`,
             image: photo ? photo.attributes.url : null,
+            hasTickets: doc.where({ type: "-qtc-buy-button" }).length > 0,
             section: post.section,
             siteName: group.name,
             siteEmail: group.email,

@@ -32,7 +32,7 @@ export default class Event {
         extendedAddress: json.venue.extended_address
       };
     }
-    this.bylines = json.guests.map((guest: any) => {
+    this.bylines = (json.guests || []).map((guest: any) => {
       return {
         role: guest.role,
         person: people.find(person => person.id == guest.person_id)!

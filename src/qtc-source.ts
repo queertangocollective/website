@@ -181,22 +181,25 @@ export default class QTCSource extends Document {
           return ticketCard.attributes.ticketId.indexOf(ticket.id) !== -1;
         })!;
 
-        doc.replaceAnnotation(
-          ticketCard,
-          new BuyButton({
-            start: ticketCard.start,
-            end: ticketCard.start + 1,
-            attributes: {
-              code: `${post.group.code}-${ticket.id}`,
-              callToAction: ticketCard.attributes.callToAction,
-              locale: post.group.locale,
-              description: ticket.description,
-              cost: ticket.cost,
-              currency: ticket.currency.toLowerCase(),
-              stripeFee: ticket.stripeFee
-            }
-          })
-        );
+        let now = new Date();
+        if (ticket.validFrom < now && now < ticket.validTo) {
+          doc.replaceAnnotation(
+            ticketCard,
+            new BuyButton({
+              start: ticketCard.start,
+              end: ticketCard.start + 1,
+              attributes: {
+                code: `${post.group.code}-${ticket.id}`,
+                callToAction: ticketCard.attributes.callToAction,
+                locale: post.group.locale,
+                description: ticket.description,
+                cost: ticket.cost,
+                currency: ticket.currency.toLowerCase(),
+                stripeFee: ticket.stripeFee
+              }
+            })
+          );
+        }
       });
 
     doc

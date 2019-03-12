@@ -4,6 +4,7 @@ export default class Page extends BlockAnnotation {
   static vendorPrefix = "qtc";
   static type = "page";
   attributes!: {
+    hasTickets: boolean;
     locale: string;
     group: {
       name: string;
