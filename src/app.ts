@@ -108,6 +108,7 @@ export default function(db: knex) {
 
       if (person == null) {
         person = await Person.create({
+          group,
           name: req.body.name,
           email: req.body.email.toLowerCase()
         });

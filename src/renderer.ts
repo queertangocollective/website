@@ -35,6 +35,7 @@ registerHelper("add", function(a: number, b: number) {
 
 registerHelper("format-money", function(amount: number, currency: string, locale: string) {
   let formatter = Intl.NumberFormat(locale, { style: 'currency', currency });
+  amount /= Math.pow(10, formatter.resolvedOptions().minimumFractionDigits);
   return formatter.format(amount);
 });
 
