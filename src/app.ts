@@ -138,7 +138,7 @@ export default function(db: knex) {
         currency: balance.currency,
         payment_method: 'stripe',
         payment_processor_url: paymentUrl
-      });
+      }).returning('*');
 
       for (let i = 0, len = ticket.events.length; i < len; i++) {
         let event = ticket.events[i];
@@ -148,7 +148,7 @@ export default function(db: knex) {
           group_id: group!.id,
           person_id: person!.id,
           event_id: event.id,
-          purchase_id: transaction.id,
+          purchase_id: transaction[0].id,
           ticket_id: ticket!.id,
           attended: false
         });
