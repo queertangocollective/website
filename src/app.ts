@@ -301,6 +301,8 @@ export default function(db: knex) {
           }`
         );
         let build = group.build;
+        res.setHeader('cache-control', 'public, max-age=0');
+        res.setHeader('last-modified', group.build.live_at.toUTCString());
         res.send(
           html(build.html.replace("%7B%7Bbuild.id%7D%7D", build.id.toString()))
         );
@@ -316,6 +318,8 @@ export default function(db: knex) {
     if (group.website.assets[`public${req.path}`]) {
       let asset = group.website.assets[`public${req.path}`];
       asset = asset.replace(/Stripe\(['|"]pk_test_[a-zA-Z0-9]+['|"]\)/, `Stripe("${group.stripePublishableKey}")`);
+      res.setHeader('cache-control', 'public, max-age=0');
+      res.setHeader('last-modified', group.website.created_at.toUTCString());
       res.type(path.extname(req.path));
       res.send(asset);
       return;

@@ -40,10 +40,12 @@ export default class Group {
   sections: Section[];
   timezone: string;
   website?: {
+    created_at: Date;
     assets: { [key: string]: string };
   };
   build?: {
     id: number;
+    live_at: Date;
     git_sha: string;
     git_url: string;
     html: string;
@@ -65,10 +67,24 @@ export default class Group {
       json.apple_developer_merchantid_domain_association;
     this.name = json.name;
     this.email = json.email;
-    this.website = json.website;
     this.sections = json.channels.map((channel: any) => new Section(channel));
     this.timezone = json.timezone;
-    this.build = json.build;
+
+    if (json.website) {
+      let { created_at, ...website } = json.website;
+      this.website = {
+        ...website,
+        created_at: new Date(Date.parse(created_at))
+      };
+    }
+
+    if (json.build) {
+      let { live_at, ...build } = json.build;
+      this.build = {
+        ...build,
+        live_at: new Date(Date.parse(live_at))
+      };
+    }
 
     this.encryptedStripePublishableKey = json.encrypted_stripe_publishable_key;
     this.encryptedStripeSecretKey = json.encrypted_stripe_secret_key;
