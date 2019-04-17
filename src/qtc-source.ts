@@ -100,7 +100,7 @@ export default class QTCSource extends Document {
       .remove();
 
     doc.where({ type: "-mobiledoc-river-card" }).update((card: RiverCard) => {
-      let posts = card.attributes.postIds
+      let posts = card.attributes.postIds && card.attributes.postIds.length
         ? card.attributes.postIds.map(id => {
           let item = post.posts.find(post => post.postId == parseInt(id, 10));
           return item!;

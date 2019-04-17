@@ -46,7 +46,7 @@ export default class PublishedPost {
         return ids;
       }, postIds);
 
-      let dynamicLists = rivers.filter(river => river.postIds == null);
+      let dynamicLists = rivers.filter(river => river.postIds == null || river.postIds.length === 0);
 
       let posts: PublishedPost[] = [];
       for (let i = 0, len = dynamicLists.length; i < len; i++) {
