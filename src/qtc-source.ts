@@ -100,12 +100,29 @@ export default class QTCSource extends Document {
       .remove();
 
     doc.where({ type: "-mobiledoc-river-card" }).update((card: RiverCard) => {
-      let posts = post.posts.filter(post => {
-        return (
-          parseInt(card.attributes.channelId, 10) ==
-          (post.section && post.section.id)
-        );
-      });
+      let posts = card.attributes.postIds
+        ? card.attributes.postIds.map(id => {
+          let item = post.posts.find(post => post.postId == parseInt(id, 10));
+          return item!;
+        }).filter(post => post != null)
+        : post.posts.filter(post => {
+          if (card.attributes.channelId) {
+            if (card.attributes.featured) {
+              return (
+                parseInt(card.attributes.channelId, 10) ==
+                (post.section && post.section.id)
+              ) && post.featured;
+            } else {
+              return (
+                parseInt(card.attributes.channelId, 10) ==
+                (post.section && post.section.id)
+              );
+            }
+          } else if (card.attributes.featured) {
+            return post.featured;
+          }
+          return false;
+        });
 
       doc.replaceAnnotation(
         card,

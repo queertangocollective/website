@@ -62,7 +62,8 @@ export class RiverCard extends ObjectAnnotation {
   static type = "river-card";
   attributes!: {
     channelId: string;
-    posts: any;
+    featured: boolean;
+    postIds: string[];
   };
 }
 

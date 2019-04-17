@@ -30,30 +30,50 @@ export default class PublishedPost {
 
     if (includeRelationships) {
       // Grab all rivers first
-      let sectionIds = await this.db
-        .select()
-        .from("published_channels")
-        .where({
-          published_post_id: parseInt(post.id, 10)
-        })
-        .then((publishedChannels: any) => {
-          return publishedChannels.map((publishedChannel: any) =>
-            parseInt(publishedChannel.channel_id, 10)
-          );
+      let rivers: Array<{
+        channelId: string;
+        postIds: string[];
+        featured: boolean;
+      }> = JSON.parse(post.body).cards
+        .filter((card: any[]) => card[0] === 'river')
+        .map((card: any[]) => card[1]);
+
+      let postIds: number[] = [];
+      postIds = rivers.reduce((ids, river) => {
+        if (river.postIds) {
+          ids = ids.concat(river.postIds.map(id => parseInt(id, 10)));
+        }
+        return ids;
+      }, postIds);
+
+      let dynamicLists = rivers.filter(river => river.postIds == null);
+
+      let posts: PublishedPost[] = [];
+      for (let i = 0, len = dynamicLists.length; i < len; i++) {
+        let river = dynamicLists[i];
+        let section = query.group.sections.find(section => section.id == parseInt(river.channelId, 10));
+        let dynamicPosts = await PublishedPost.all({
+          group: query.group,
+          postId: post.id,
+          featured: river.featured,
+          section
         });
 
-      let sections = query.group.sections.filter(
-        section => sectionIds.indexOf(section.id) !== -1
-      );
-      if (sectionIds.length) {
-        post.posts = await PublishedPost.all({
-          sections,
-          group: query.group,
-          postId: post.id
-        });
-      } else {
-        post.posts = [];
+        if (dynamicPosts.length) {
+          posts.push(...dynamicPosts.filter(post => posts.indexOf(post) === -1));
+        }
       }
+
+      postIds = postIds.filter(id => posts.find(post => post.id === id) == null);
+      if (postIds.length) {
+        posts = await PublishedPost.all({
+          group: query.group,
+          postId: post.id,
+          postIds
+        });
+      }
+
+      post.posts = posts;
 
       // Then grab all tickets
       let tickets = await this.db
@@ -228,38 +248,94 @@ export default class PublishedPost {
   }
 
   static async all(query: {
-    sections: Section[];
+    section?: Section;
+    featured?: boolean;
     postId: number;
+    postIds?: number[];
     group: Group;
   }) {
-    let river = await this.db
-      .select()
-      .from("published_posts")
-      .whereIn("channel_id", query.sections.map(section => section.id))
-      .whereNot({
-        id: query.postId
-      })
-      .whereNotIn("slug", query.sections.map(section => section.slug))
-      .where({
+    if (query.section) {
+      let condition: { [key: string]: any } = {
         live: true,
+        channel_id: query.section.id,
         group_id: query.group.id
-      })
-      .orderBy([
-        { column: "featured", order: "desc" },
-        { column: "created_at", order: "desc" }
-      ]);
+      };
+      if (query.featured) {
+        condition.featured = true;
+      }
+      let river = await this.db
+        .select()
+        .from("published_posts")
+        .whereNot({
+          id: query.postId,
+          slug: query.section.slug
+        })
+        .where(condition)
+        .orderBy([
+          { column: "featured", order: "desc" },
+          { column: "created_at", order: "desc" }
+        ]);
 
-    river.forEach((item: any) => {
-      item.group = query.group;
-      item.section = query.group.sections.find(
-        section => item.channel_id == section.id
-      );
-    });
+      river.forEach((item: any) => {
+        item.group = query.group;
+        item.section = query.group.sections.find(
+          section => item.channel_id == section.id
+        );
+      });
+  
+      return river.map((post: any) => new PublishedPost(post)) as PublishedPost[];
+    }
 
-    return river.map((post: any) => new PublishedPost(post)) as PublishedPost[];
+    if (query.featured) {
+      let river = await this.db
+        .select()
+        .from("published_posts")
+        .whereNot({
+          id: query.postId
+        })
+        .where({
+          live: true,
+          group_id: query.group.id,
+          featured: true
+        })
+        .orderBy([
+          { column: "created_at", order: "desc" }
+        ]);
+
+      river.forEach((item: any) => {
+        item.group = query.group;
+        item.section = query.group.sections.find(
+          section => item.channel_id == section.id
+        );
+      });
+
+      return river.map((post: any) => new PublishedPost(post)) as PublishedPost[];
+    }
+
+    if (query.postIds) {
+      let river = await this.db
+        .select()
+        .from("published_posts")
+        .whereIn("post_id", query.postIds)
+        .where({
+          live: true,
+          group_id: query.group.id
+        });
+
+      river.forEach((item: any) => {
+        item.group = query.group;
+        item.section = query.group.sections.find(
+          section => item.channel_id == section.id
+        );
+      });
+
+      return river.map((post: any) => new PublishedPost(post)) as PublishedPost[];
+    }
+    return [];
   }
 
   id: number;
+  postId: number;
   title: string;
   slug: string;
   body: string;
@@ -281,6 +357,7 @@ export default class PublishedPost {
     this.section = json.section;
     this.featured = json.featured;
     this.id = json.id;
+    this.postId = json.post_id;
 
     this.posts = json.posts;
     this.photos = (json.photos || []).map((photo: any) => new Photo(photo));
