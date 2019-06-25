@@ -9,6 +9,7 @@ export class GalleryCard extends ObjectAnnotation {
     style: string;
     size: string;
     photoIds: string[];
+    caption: string;
   };
 }
 

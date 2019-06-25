@@ -530,7 +530,8 @@ export default class QTCSource extends Document {
                   altText: photo.altText
                 };
               }),
-              style: galleryCard.attributes.style,
+              style: 'mosaic',
+              caption: galleryCard.attributes.caption,
               size: galleryCard.attributes.size
             }
           })

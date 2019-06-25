@@ -13,5 +13,6 @@ export default class Gallery extends ObjectAnnotation {
     }>;
     size: "small" | "medium" | "large" | undefined;
     style: "mosaic" | undefined;
+    caption: string;
   };
 }
