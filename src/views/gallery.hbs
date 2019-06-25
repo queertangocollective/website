@@ -1,23 +1,38 @@
 {{#if (equals attrs.size 'large')}}
-  <div class="{{attrs.style}} size-{{attrs.size}}">
+  <figure class="mosaic size-{{attrs.size}}">
     {{#each attrs.photos as |photo|}}
       <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{image-url photo.url}}" width={{photo.width}} height={{photo.height}}>
     {{/each}}
-  </div>
+    {{#if attrs.caption}}
+      <figcaption>
+        {{attrs.caption}}
+      </figcaption>
+    {{/if}}
+  </figure>
 {{else if (equals attrs.size 'medium')}}
-  <div class='wide-container clear-fix'>
-    <div class="{{attrs.style}} size-{{attrs.size}}">
+  <figure class='wide-container clear-fix'>
+    <div class="mosaic size-{{attrs.size}}">
       {{#each attrs.photos as |photo|}}
         <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{image-url photo.url}}" width={{photo.width}} height={{photo.height}}>
       {{/each}}
     </div>
-  </div>
+    {{#if attrs.caption}}
+      <figcaption>
+        {{attrs.caption}}
+      </figcaption>
+    {{/if}}
+  </figure>
 {{else}}
-  <div class='container clear-fix'>
-    <div class="{{attrs.style}} size-{{attrs.size}}">
+  <figure class='container clear-fix'>
+    <div class="mosaic size-{{attrs.size}}">
       {{#each attrs.photos as |photo|}}
         <img {{#if photo.altText}}alt="{{photo.altText}}" {{/if}}src="{{image-url photo.url}}" width={{photo.width}} height={{photo.height}}>
       {{/each}}
     </div>
-  </div>
+    {{#if attrs.caption}}
+      <figcaption>
+        {{attrs.caption}}
+      </figcaption>
+    {{/if}}
+  </figure>
 {{/if}}
